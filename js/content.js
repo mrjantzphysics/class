@@ -179,3 +179,20 @@ CLASSES[1].units[2].items = [
     summary: "Measure your launcher's speed, then predict and hit a target." },
 ];
 CLASSES[1].units[2].printables = [P.gWorkbook, P.gEqSheet, P.gCatchUp, P.gExtension];
+
+// Announcements shown in the side column of each class page. Newest first; leave empty to hide the box.
+// Example: { text: "Quiz on Sections 2.4–2.6 next Tuesday.", isNew: true }
+SITE.announcements = { honors: [], general: [] };
+
+// Everyday links in the side column.
+SITE.everyday = {
+  honors: [P.hWorkbook, { url: "https://www.desmos.com/calculator", title: "Desmos calculator" }],
+  general: [P.gWorkbook, P.gEqSheet, { url: "https://www.desmos.com/calculator", title: "Desmos calculator" }],
+};
+
+// Workbook problems by section, from the workbook's problem marks:
+// C = ● Core, P = ○ More practice, X = ★ Challenge.
+SITE.workbook = {
+  honors: {"2.1": {"C": [1, 2, 3, 5], "P": [4], "X": []}, "2.2": {"C": [1, 2, 4, 9], "P": [3, 5, 6, 7], "X": [8]}, "2.3": {"C": [1, 2, 4, 9, 10, 11], "P": [3, 5, 6, 7], "X": [8]}, "2.4": {"C": [1, 2, 8, 9, 10], "P": [3, 4, 5, 6], "X": [7]}, "2.5": {"C": [1, 2, 6, 7, 8], "P": [3, 4, 5], "X": []}, "2.6": {"C": [1, 2, 3, 5, 7, 9], "P": [4, 6, 8], "X": []}, "2.7": {"C": [1, 2, 3, 4, 7, 12], "P": [5, 8, 9, 10, 11], "X": [6]}, "2.8": {"C": [1, 2, 4, 8, 9, 10], "P": [3, 5, 6, 7, 11, 12, 13], "X": [14, 15]}, "2.9": {"C": [1, 3, 7, 12, 13, 14], "P": [2, 4, 5, 6, 8, 9, 10, 11], "X": []}, "2.10": {"C": [1, 2, 5, 7, 8, 9], "P": [3, 4, 6], "X": []}, "2.11": {"C": [1, 2, 4, 5, 7], "P": [3, 8, 9], "X": [6]}, "2.12": {"C": [1, 2, 3, 7, 8, 9], "P": [4, 5], "X": [6]}},
+  general: {"2.1": {"C": [1, 2, 3, 5, 9, 12], "P": [4, 6, 7, 8, 10], "X": [11]}, "2.2": {"C": [1, 2, 3, 4, 9], "P": [5, 6, 7], "X": [8]}, "2.3": {"C": [1, 2, 3, 5, 7, 12], "P": [4, 6, 8, 9, 10], "X": [11]}, "2.4": {"C": [1, 2, 4, 8, 10], "P": [3, 5, 6, 7], "X": [9]}, "2.5": {"C": [1, 2, 3, 4, 5, 10], "P": [6, 7, 8], "X": [9]}, "2.6": {"C": [1, 2, 5, 6, 7, 11], "P": [3, 4, 8, 9], "X": [10]}, "2.7": {"C": [1, 2, 3, 4, 5, 11], "P": [6, 7, 8, 9], "X": [10]}, "2.8": {"C": [1, 2, 4, 6, 7, 9], "P": [3, 5], "X": [8]}, "2.9": {"C": [1, 2, 3, 4, 5, 8], "P": [6], "X": [7]}, "2.10": {"C": [1, 2, 3, 5, 7, 8, 11], "P": [4, 6, 9], "X": [10]}, "2.11": {"C": [1, 2, 4, 5, 6, 8], "P": [3], "X": [7]}},
+};
