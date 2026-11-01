@@ -1,7 +1,8 @@
-// Router and page rendering. Pages are addressed by hash:
-//   #honors            class page (units)
-//   #honors-unit-2     unit page (sequence)
-//   #honors-2-1        a section or event page (#honors-2-7-2-8, #honors-quiz-2-1)
+// Router and page rendering, plain style. Pages are addressed by hash:
+//   #honors                 class page (current unit table + side column)
+//   #honors-unit-2          a unit's page
+//   #honors-2-7-2-8         a section or event page, Notes tab
+//   #honors-2-7-2-8-practice  same page, another tab (notes, practice, videos, sims, printables)
 (function () {
   const $ = (s, el = document) => el.querySelector(s);
   const app = $("#app");
@@ -25,155 +26,137 @@
   const slug = s => s.replace(/[.–]/g, "-").replace(/-+/g, "-");
   const itemId = it => it.kind === "section" ? slug(it.sec) : it.id;
   const itemLabel = it => it.kind === "section" ? `Section ${it.sec}` : "";
+  const TABS = [
+    ["notes", "Notes", it => it.deck && DECKS[it.deck]],
+    ["practice", "Practice", it => it.practice && it.practice.length],
+    ["videos", "Video", it => it.videos && it.videos.length],
+    ["sims", "Simulation", it => it.sims && it.sims.length],
+    ["printables", "Printables", it => it.printables && it.printables.length],
+  ];
+  const liveUnits = c => c.units.filter(u => u.items && u.items.length);
   function find(hash) {
+    let tab = null;
+    const m = hash.match(/^(.*)-(notes|practice|videos|sims|printables)$/);
+    if (m) { hash = m[1]; tab = m[2]; }
     for (const c of CLASSES) {
-      if (hash === c.id) return { view: "class", c };
+      if (hash === c.id) { const lu = liveUnits(c); return { view: "unit", c, u: lu[lu.length - 1], classPage: true }; }
       for (const u of c.units) {
         if (hash === `${c.id}-unit-${u.num}`) return { view: "unit", c, u };
         const items = u.items || [];
         for (let i = 0; i < items.length; i++)
-          if (hash === `${c.id}-${itemId(items[i])}`) return { view: "item", c, u, it: items[i], i };
+          if (hash === `${c.id}-${itemId(items[i])}`) return { view: "item", c, u, it: items[i], i, tab };
       }
     }
     return { view: "home" };
   }
+  const otherClass = c => CLASSES.find(x => x.id !== c.id);
+  const fileHref = f => f.url || `files/${f.file}`;
+  const fileLink = f => `<a href="${fileHref(f)}" target="_blank" rel="noopener">${esc(f.title)}${f.file ? " (PDF)" : ""}</a>`;
 
-  const ICONS = {
-    notes: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
-    videos: '<svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 9l5 3-5 3z" class="fill"/></svg>',
-    practice: '<svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg>',
-    sims: '<svg viewBox="0 0 24 24"><path d="M3 19c4-10 10-14 18-14"/><circle cx="7" cy="12" r="1.6" class="fill"/><circle cx="12" cy="8" r="1.6" class="fill"/><circle cx="17" cy="6" r="1.6" class="fill"/></svg>',
-    printables: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h7"/></svg>',
-  };
-  const TABS = [
-    ["notes", "Notes", it => it.deck && DECKS[it.deck]],
-    ["practice", "Practice", it => it.practice && it.practice.length],
-    ["videos", "Videos", it => it.videos && it.videos.length],
-    ["sims", "Simulations", it => it.sims && it.sims.length],
-    ["printables", "Printables", it => it.printables && it.printables.length],
-  ];
-
-  function crumbs(parts) {
-    return `<nav class="crumbs">${parts.map(([h, t]) => h ? `<a href="#${h}">${esc(t)}</a>` : `<span>${esc(t)}</span>`).join('<span class="sep">›</span>')}</nav>`;
-  }
-
-  // ---------- views ----------
+  // ---------- home ----------
   function home() {
     document.title = SITE.title;
     app.innerHTML = `
-      <section class="hero">
-        <h1>${esc(SITE.title)}</h1>
-        <p>${esc(SITE.tagline)}</p>
-      </section>
-      <div class="class-cards">
-        ${CLASSES.map(c => `
-          <a class="class-card ${c.id}" href="#${c.id}">
-            <span class="eyebrow">Class</span>
-            <h2>${esc(c.name)}</h2>
-            <p>${esc(c.blurb)}</p>
-            <span class="go">Open ›</span>
-          </a>`).join("")}
-      </div>
-      ${continueCard()}`;
-  }
-  function continueCard() {
-    const last = store.get("last", null);
-    if (!last) return "";
-    const f = find(last);
-    if (f.view !== "item") return "";
-    return `<a class="continue" href="#${last}"><span class="eyebrow">Pick up where you left off</span>
-      <b>${esc(f.c.name)} · ${esc(itemLabel(f.it) ? itemLabel(f.it) + ": " : "")}${esc(f.it.title)}</b></a>`;
+      <h1>${esc(SITE.title)}</h1>
+      <p class="sub">${esc(SITE.tagline)}</p>
+      <hr>
+      <ul class="big">
+        ${CLASSES.map(c => `<li><a href="#${c.id}">${esc(c.name)}</a> · ${esc(c.blurb)}</li>`).join("")}
+      </ul>`;
   }
 
-  function classView({ c }) {
-    document.title = `${c.name} · ${SITE.title}`;
+  // ---------- class / unit page (E1) ----------
+  function unitView({ c, u }) {
+    document.title = `${c.name} · Unit ${u.num}`;
+    const oc = otherClass(c);
+    const sims = [...new Set(u.items.flatMap(it => it.sims || []))];
+    const ann = (SITE.announcements || {})[c.id] || [];
+    const every = (SITE.everyday || {})[c.id] || u.printables || [];
+    const mats = it => TABS.filter(([, , ok]) => ok(it))
+      .map(([k, t]) => `<a href="#${c.id}-${itemId(it)}${k === "notes" ? "" : "-" + k}">${t.toLowerCase()}</a>`).join(", ");
     app.innerHTML = `
-      ${crumbs([["home", "Home"], [null, c.name]])}
-      <header class="page-head ${c.id}"><span class="eyebrow">${esc(c.name)}</span><h1>Units</h1></header>
-      <div class="units">
-        ${c.units.map(u => {
-          const live = u.items && u.items.length;
-          const inner = `<span class="unum">${u.num === 0 ? "Start" : "Unit " + u.num}</span>
-            <h3>${esc(u.title)}</h3>
-            <p>${esc(u.eq || u.sub || "")}</p>
-            <span class="status">${live ? "Open ›" : "Coming soon"}</span>`;
-          return live ? `<a class="unit live" href="#${c.id}-unit-${u.num}">${inner}</a>` : `<div class="unit soon">${inner}</div>`;
-        }).join("")}
+      <h1>${esc(c.name)}</h1>
+      <p class="sub">Mr. Jantz &nbsp;|&nbsp; <a href="#home">Home</a> &nbsp;|&nbsp; <a href="#${oc.id}">${esc(oc.name)}</a></p>
+      <hr>
+      <div class="cols">
+        <div>
+          <h2 class="first">Unit ${u.num}: ${esc(u.title)}</h2>
+          ${u.eq ? `<p class="eq">${esc(u.eq)}</p>` : ""}
+          <table class="seq">
+            <tr><th>Section</th><th>Topic</th><th>Materials</th></tr>
+            ${u.items.map(it => `<tr class="${it.kind}">
+              <td>${it.kind === "section" ? esc(it.sec) : ""}</td>
+              <td><a class="topic" href="#${c.id}-${itemId(it)}">${it.kind === "section" ? esc(it.title) : `<b>${esc(it.title)}</b>`}</a></td>
+              <td>${mats(it)}</td></tr>`).join("")}
+          </table>
+        </div>
+        <div>
+          ${ann.length ? `<div class="box"><b class="t">Announcements</b>${ann.map(a => `<p>${a.isNew ? '<span class="new">NEW</span> ' : ""}${esc(a.text)}</p>`).join("")}</div>` : ""}
+          ${every.length ? `<div class="box"><b class="t">Every day</b>${every.map(fileLink).join("<br>")}</div>` : ""}
+          ${sims.length ? `<div class="box"><b class="t">Simulations</b>${sims.map(s => `<a href="${s.file}" target="_blank" rel="noopener">${esc(s.title)}</a>`).join("<br>")}</div>` : ""}
+          ${u.printables && u.printables.length > every.length ? `<div class="box"><b class="t">Unit printables</b>${u.printables.filter(p => !every.includes(p)).map(fileLink).join("<br>")}</div>` : ""}
+          <div class="box"><b class="t">Units</b>${liveUnits(c).map(x => x === u
+            ? `<b>Unit ${x.num}: ${esc(x.title)}</b>` : `<a href="#${c.id}-unit-${x.num}">Unit ${x.num}: ${esc(x.title)}</a>`).join("<br>")}
+            <p class="small">More units are added as the year goes.</p></div>
+        </div>
       </div>`;
   }
 
-  function unitView({ c, u }) {
-    document.title = `Unit ${u.num}: ${u.title} · ${c.name}`;
-    const has = it => TABS.filter(([k, , ok]) => ok(it)).map(([k, t]) => `<span class="mini" title="${t}">${ICONS[k]}</span>`).join("");
-    app.innerHTML = `
-      ${crumbs([["home", "Home"], [c.id, c.name], [null, `Unit ${u.num}`]])}
-      <header class="page-head ${c.id}">
-        <span class="eyebrow">${esc(c.name)} · Unit ${u.num}</span>
-        <h1>${esc(u.title)}</h1>
-        ${u.eq ? `<p class="eq">${esc(u.eq)}</p>` : ""}
-      </header>
-      ${u.printables ? `<div class="unit-files">${u.printables.map(fileLink).join("")}</div>` : ""}
-      <ol class="sequence">
-        ${u.items.map(it => `
-          <li class="${it.kind}">
-            <a href="#${c.id}-${itemId(it)}">
-              <span class="tag">${it.kind === "section" ? esc(it.sec) : eventTag(it)}</span>
-              <span class="body"><b>${esc(it.title)}</b><small>${esc(it.summary || "")}</small></span>
-              <span class="has">${has(it)}</span>
-            </a>
-          </li>`).join("")}
-      </ol>`;
-  }
-  function eventTag(it) {
-    if (it.id.startsWith("quiz")) return "Quiz";
-    if (it.id === "test") return "Test";
-    if (it.id === "review") return "Review";
-    if (it.id === "project") return "Project";
-    return "Lab";
+  // ---------- section / event page (S3) ----------
+  function wbBox(c, it) {
+    if (it.kind !== "section") return "";
+    const wb = ((SITE.workbook || {})[c.id]) || {};
+    const [a, b] = it.sec.split("–");
+    const secs = [];
+    if (!b) secs.push(a);
+    else { const [ua, la] = a.split(".").map(Number), lb = +b.split(".")[1]; for (let k = la; k <= lb; k++) secs.push(`${ua}.${k}`); }
+    const rows = secs.filter(s => wb[s]).map(s => {
+      const m = wb[s], part = (sym, arr) => arr.length ? `${sym} ${arr.join(", ")}` : "";
+      return `<p><b>Section ${s}</b><br>${[part("●", m.C), part("○", m.P), part("★", m.X)].filter(Boolean).join(" &nbsp;")}</p>`;
+    });
+    return rows.length ? `<div class="box"><b class="t">Workbook problems</b>${rows.join("")}<p class="small">● Core &nbsp;○ More practice &nbsp;★ Challenge</p></div>` : "";
   }
 
+  let keyHandler = null;
   function itemView(f) {
     const { c, u, it, i } = f;
-    const hash = `${c.id}-${itemId(it)}`;
-    store.set("last", hash);
+    const base = `${c.id}-${itemId(it)}`;
     const label = itemLabel(it);
     document.title = `${label ? label + ": " : ""}${it.title} · ${c.name}`;
     const tabs = TABS.filter(([, , ok]) => ok(it));
-    const saved = store.get("tab:" + hash, null);
-    let tab = tabs.find(t => t[0] === saved) ? saved : (tabs[0] || [])[0];
+    const tab = tabs.find(t => t[0] === f.tab) ? f.tab : (tabs[0] || [])[0];
     const prev = u.items[i - 1], next = u.items[i + 1];
-    const navLink = (x, dir) => x ? `<a class="pn ${dir}" href="#${c.id}-${itemId(x)}"><small>${dir === "prev" ? "‹ Previous" : "Next ›"}</small><b>${esc(itemLabel(x) ? x.sec + " " : "")}${esc(x.title)}</b></a>` : "<span></span>";
+    const nm = x => `${x.kind === "section" ? x.sec + " " : ""}${esc(x.title)}`;
     app.innerHTML = `
-      ${crumbs([["home", "Home"], [c.id, c.name], [`${c.id}-unit-${u.num}`, `Unit ${u.num}`], [null, label || it.title]])}
-      <header class="page-head ${c.id}">
-        <span class="eyebrow">${esc(c.name)} · Unit ${u.num}${label ? " · " + label : ""}</span>
-        <h1>${esc(it.title)}</h1>
-        ${it.summary ? `<p class="eq">${esc(it.summary)}</p>` : ""}
-      </header>
-      <div class="tabs" role="tablist">
-        ${tabs.map(([k, t]) => `<button role="tab" data-tab="${k}">${ICONS[k]}<span>${t}</span></button>`).join("")}
-      </div>
-      <div id="panel"></div>
-      <nav class="prevnext">${navLink(prev, "prev")}${navLink(next, "next")}</nav>`;
-    const show = k => {
-      tab = k; store.set("tab:" + hash, k);
-      app.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === k));
-      const p = $("#panel");
-      ({ notes: notesPanel, practice: practicePanel, videos: videosPanel, sims: simsPanel, printables: printPanel })[k](p, it, c);
-    };
-    app.querySelectorAll(".tabs button").forEach(b => b.onclick = () => show(b.dataset.tab));
-    if (tab) show(tab); else $("#panel").innerHTML = `<p class="empty">Materials for this one are on the way.</p>`;
+      <p class="crumb"><a href="#${c.id}">${esc(c.name)}</a> › <a href="#${c.id}-unit-${u.num}">Unit ${u.num}</a> › ${esc(label || it.title)}</p>
+      <h1>${label ? esc(label) + ": " : ""}${esc(it.title)}</h1>
+      ${it.summary ? `<p class="sub">${esc(it.summary)}</p>` : ""}
+      <div class="tabs" role="tablist">${tabs.map(([k, t]) => k === tab
+        ? `<span class="on" role="tab" aria-selected="true">${t}</span>`
+        : `<span role="tab"><a href="#${base}${k === "notes" ? "" : "-" + k}">${t}</a></span>`).join("")}</div>
+      <div class="cols">
+        <div id="panel"></div>
+        <div>
+          ${wbBox(c, it)}
+          ${tab !== "printables" && it.printables ? `<div class="box"><b class="t">Printables</b>${it.printables.map(fileLink).join("<br>")}</div>` : ""}
+          <div class="box"><b class="t">Sections</b>
+            ${prev ? `<a href="#${c.id}-${itemId(prev)}">‹ ${nm(prev)}</a><br>` : ""}
+            ${next ? `<a href="#${c.id}-${itemId(next)}">${nm(next)} ›</a><br>` : ""}
+            <a href="#${c.id}-unit-${u.num}">Back to Unit ${u.num}</a></div>
+        </div>
+      </div>`;
+    const p = $("#panel");
+    if (!tab) { p.innerHTML = `<p class="gray">Materials for this one are on the way.</p>`; return; }
+    ({ notes: notesPanel, practice: practicePanel, videos: videosPanel, sims: simsPanel, printables: printPanel })[tab](p, it, c);
   }
 
-  // ---------- notes (slide viewer) ----------
-  let keyHandler = null;
+  // ---------- notes ----------
   function notesPanel(p, it) {
     const d = DECKS[it.deck], key = "slide:" + it.deck;
-    let n = Math.min(store.get(key, 1), d.n);
     const bundle = (window.SLIDEDATA || {})[it.deck];
     if (CFG.slideBundles && !bundle) {
       // preview build: each deck's slides are packed into one script
-      p.innerHTML = `<p class="empty">Loading slides…</p>`;
+      p.innerHTML = `<p class="gray">Loading slides…</p>`;
       const sc = document.createElement("script");
       sc.src = `slides/${it.deck}.js`;
       sc.onload = () => notesPanel(p, it);
@@ -181,34 +164,27 @@
       return;
     }
     const src = k => bundle ? bundle[k - 1] : `slides/${it.deck}/${String(k).padStart(2, "0")}.jpg`;
+    let n = Math.min(store.get(key, 1), d.n);
     p.innerHTML = `
-      <div class="viewer">
-        <div class="stage"><img alt="Slide" id="slideImg"><button class="nav l" aria-label="Previous slide">‹</button><button class="nav r" aria-label="Next slide">›</button></div>
-        <div class="vbar">
-          <button class="vb" data-a="prev">‹ Prev</button>
-          <span class="count"><span id="sn"></span> / ${d.n}</span>
-          <button class="vb" data-a="next">Next ›</button>
-          <span class="grow"></span>
-          <button class="vb" data-a="grid">All slides</button>
-          <button class="vb" data-a="full">Full screen</button>
-        </div>
-        <div class="grid hidden">${Array.from({ length: d.n }, (_, k) => `<button data-k="${k + 1}"><img loading="lazy" src="${src(k + 1)}" alt="Slide ${k + 1}"><span>${k + 1}</span></button>`).join("")}</div>
-      </div>`;
-    const img = $("#slideImg", p), viewer = $(".viewer", p), grid = $(".grid", p);
+      <div class="viewer"><img class="slide" alt="Slide" id="slideImg"></div>
+      <p class="vbar"><button data-a="prev">‹ Previous</button> Slide <span id="sn"></span> of ${d.n} <button data-a="next">Next ›</button>
+        &nbsp;<a href="#" data-a="full">full screen</a> &nbsp;<a href="#" data-a="grid">all slides</a></p>
+      <div class="grid hidden">${Array.from({ length: d.n }, (_, k) => `<a href="#" data-k="${k + 1}"><img loading="lazy" src="${src(k + 1)}" alt="Slide ${k + 1}"><span>${k + 1}</span></a>`).join("")}</div>`;
+    const img = $("#slideImg", p), grid = $(".grid", p), viewer = $(".viewer", p);
     const go = k => {
       n = Math.max(1, Math.min(d.n, k)); img.src = src(n); $("#sn", p).textContent = n; store.set(key, n);
       if (n < d.n) { const pre = new Image(); pre.src = src(n + 1); }
     };
-    p.querySelector(".nav.l").onclick = () => go(n - 1);
-    p.querySelector(".nav.r").onclick = () => go(n + 1);
-    p.querySelectorAll(".vb").forEach(b => b.onclick = () => {
+    p.querySelectorAll("[data-a]").forEach(b => b.onclick = e => {
+      e.preventDefault();
       const a = b.dataset.a;
       if (a === "prev") go(n - 1);
       if (a === "next") go(n + 1);
       if (a === "grid") grid.classList.toggle("hidden");
-      if (a === "full") { try { (document.fullscreenElement ? document.exitFullscreen() : viewer.requestFullscreen()).catch(() => { }); } catch (e) { } }
+      if (a === "full") { try { (document.fullscreenElement ? document.exitFullscreen() : viewer.requestFullscreen()).catch(() => { }); } catch (err) { } }
     });
-    grid.querySelectorAll("button").forEach(b => b.onclick = () => { go(+b.dataset.k); grid.classList.add("hidden"); viewer.scrollIntoView({ behavior: "smooth", block: "start" }); });
+    grid.querySelectorAll("[data-k]").forEach(b => b.onclick = e => { e.preventDefault(); go(+b.dataset.k); grid.classList.add("hidden"); });
+    img.onclick = e => go(n + (e.offsetX < img.clientWidth / 3 ? -1 : 1));
     if (keyHandler) document.removeEventListener("keydown", keyHandler);
     keyHandler = e => {
       if (!document.body.contains(img) || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
@@ -216,9 +192,6 @@
       if (e.key === "ArrowLeft") go(n - 1);
     };
     document.addEventListener("keydown", keyHandler);
-    let x0 = null;
-    img.addEventListener("touchstart", e => x0 = e.touches[0].clientX, { passive: true });
-    img.addEventListener("touchend", e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) go(n + (dx < 0 ? 1 : -1)); x0 = null; });
     go(n);
   }
 
@@ -227,63 +200,49 @@
     const types = it.practice.filter(k => PRACTICE[k]);
     const statsKey = `stats:${c.id}-${itemId(it)}`;
     let type = types[0], prob = null;
-    p.innerHTML = `
-      <div class="practice">
-        <div class="ptypes">${types.length > 1 ? types.map(k => `<button data-k="${k}">${esc(PRACTICE[k].name)}</button>`).join("") : ""}</div>
-        <div class="pstats" id="pstats"></div>
-        <div id="prob"></div>
-      </div>`;
-    const stats = () => {
+    p.innerHTML = `<p class="ptypes"></p><div id="prob"></div>`;
+    const header = () => {
       const s = store.get(statsKey, { right: 0, tried: 0 });
-      $("#pstats", p).innerHTML = s.tried ? `You've gotten <b>${s.right}</b> of <b>${s.tried}</b> answers right here. <button class="link" id="resetStats">Reset</button>` : "Type an answer and press <b>Check</b>. Round to three significant figures.";
-      const r = $("#resetStats", p); if (r) r.onclick = () => { store.set(statsKey, { right: 0, tried: 0 }); stats(); };
+      $(".ptypes", p).innerHTML = `Problem type: ${types.map(k => k === type ? `<b>${esc(PRACTICE[k].name)}</b>` : `<a href="#" data-k="${k}">${esc(PRACTICE[k].name)}</a>`).join(" | ")}
+        &nbsp; <span class="small">${s.tried ? `Score so far: ${s.right} of ${s.tried} <a href="#" id="resetStats">reset</a>` : "Round to three significant figures."}</span>`;
+      p.querySelectorAll(".ptypes [data-k]").forEach(a => a.onclick = e => { e.preventDefault(); type = a.dataset.k; fresh(); });
+      const r = $("#resetStats", p); if (r) r.onclick = e => { e.preventDefault(); store.set(statsKey, { right: 0, tried: 0 }); header(); };
     };
-    const bump = ok => { const s = store.get(statsKey, { right: 0, tried: 0 }); s.tried++; if (ok) s.right++; store.set(statsKey, s); stats(); };
-    const fresh = () => {
+    const bump = ok => { const s = store.get(statsKey, { right: 0, tried: 0 }); s.tried++; if (ok) s.right++; store.set(statsKey, s); header(); };
+    function fresh() {
       prob = PRACTICE[type].gen();
-      p.querySelectorAll(".ptypes button").forEach(b => b.classList.toggle("on", b.dataset.k === type));
+      header();
       const box = $("#prob", p);
       box.innerHTML = `
-        <article class="problem">
-          <h3>${esc(prob.title)}</h3>
-          <p class="intro">${renderMath(prob.intro)}</p>
-          <ol class="parts">
-            ${prob.parts.map((pt, j) => `
-              <li data-j="${j}">
-                <span class="ask">${esc(pt.ask)}</span>
-                ${pt.type === "num"
-                  ? `<span class="ans"><span class="sym">${renderMath("$" + pt.sym + " =$")}</span><input inputmode="decimal" autocomplete="off" aria-label="${esc(pt.ask)}"><span class="uval">${renderMath(pt.unit ? "$" + pt.unit.replace(/^\\text\{ /, "\\text{") + "$" : "")}</span></span>`
-                  : `<span class="ans choices">${pt.options.map((o, k) => `<label><input type="radio" name="c${j}" value="${k}"> ${esc(o)}</label>`).join("")}</span>`}
-                <span class="fb" aria-live="polite"></span>
-              </li>`).join("")}
-          </ol>
-          <div class="pactions">
-            <button class="btn primary" data-a="check">Check</button>
-            <button class="btn" data-a="sol">Show solution</button>
-            <button class="btn" data-a="new">New numbers</button>
-          </div>
-          <div class="solution hidden"></div>
-        </article>`;
-      box.querySelectorAll("input:not([type=radio])").forEach(inp => inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); }));
+        <div class="prob">
+          <p><b>${esc(prob.title)}.</b> ${renderMath(prob.intro)}</p>
+          ${prob.parts.map((pt, j) => `<div class="part" data-j="${j}">(${String.fromCharCode(97 + j)}) ${esc(pt.ask)}:
+            ${pt.type === "num"
+              ? `<span class="nowrap">${renderMath("$" + pt.sym + " =$")} <input type="text" inputmode="decimal" autocomplete="off" id="ans-${j}" aria-label="${esc(pt.ask)}"> ${renderMath(pt.unit ? "$" + pt.unit.replace(/^\\text\{ /, "\\text{") + "$" : "")}</span>`
+              : pt.options.map((o, k) => `<label><input type="radio" name="c${j}" value="${k}"> ${esc(o)}</label>`).join(" ")}
+            <span class="fb" aria-live="polite"></span></div>`).join("")}
+          <p class="btns"><button data-a="check">Check</button> <button data-a="sol">Show solution</button> <button data-a="new">New numbers</button></p>
+          <div class="sol hidden"></div>
+        </div>`;
+      box.querySelectorAll("input[type=text]").forEach(inp => inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); }));
       box.querySelector('[data-a="check"]').onclick = check;
       box.querySelector('[data-a="new"]').onclick = fresh;
-      box.querySelector('[data-a="sol"]').onclick = () => {
-        const s = box.querySelector(".solution");
-        if (s.classList.contains("hidden")) {
-          s.innerHTML = `<h4>Worked solution</h4>${prob.steps.map(st => `<div class="step">${renderMath(st)}</div>`).join("")}
-            <div class="answers"><b>Answers:</b> ${prob.parts.map(pt => pt.type === "num" ? renderMath(`$${pt.sym} = ${PRACTICE_UTIL.sf(pt.value)}${pt.unit}$`) : `${esc(pt.ask)}: <b>${esc(pt.options[pt.answer])}</b>`).join(" · ")}</div>`;
-          s.classList.remove("hidden");
-        } else s.classList.add("hidden");
+      box.querySelector('[data-a="sol"]').onclick = e => {
+        const s = box.querySelector(".sol");
+        if (s.classList.toggle("hidden")) { e.target.textContent = "Show solution"; return; }
+        e.target.textContent = "Hide solution";
+        s.innerHTML = prob.steps.map(st => `<div class="step">${renderMath(st)}</div>`).join("") +
+          `<p><b>Answers:</b> ${prob.parts.map(pt => pt.type === "num" ? renderMath(`$${pt.sym} = ${PRACTICE_UTIL.sf(pt.value)}${pt.unit}$`) : `${esc(pt.ask)}: ${esc(pt.options[pt.answer])}`).join("; ")}</p>`;
       };
-    };
+    }
     function check() {
       const box = $("#prob", p);
       prob.parts.forEach((pt, j) => {
-        const li = box.querySelector(`li[data-j="${j}"]`), fb = li.querySelector(".fb");
+        const row = box.querySelector(`.part[data-j="${j}"]`), fb = row.querySelector(".fb");
         let ok = null, msg = "";
         if (pt.type === "num") {
-          const raw = li.querySelector("input").value.trim().replace(/[−–]/g, "-").replace(/,/g, "").replace(/\s/g, "");
-          if (!raw) { fb.textContent = ""; li.className = ""; return; }
+          const raw = row.querySelector("input").value.trim().replace(/[−–]/g, "-").replace(/,/g, "").replace(/\s/g, "");
+          if (!raw) { fb.textContent = ""; fb.className = "fb"; return; }
           const x = parseFloat(raw);
           if (isNaN(x)) { ok = false; msg = "Enter a number."; }
           else {
@@ -293,69 +252,57 @@
             else if (!ok) msg = "Not quite. Check your setup.";
           }
         } else {
-          const r = li.querySelector("input:checked");
-          if (!r) { fb.textContent = ""; li.className = ""; return; }
-          ok = +r.value === pt.answer; msg = ok ? "" : "Not quite.";
+          const r = row.querySelector("input:checked");
+          if (!r) { fb.textContent = ""; fb.className = "fb"; return; }
+          ok = +r.value === pt.answer; msg = "Not quite.";
         }
-        if (li.dataset.done !== "1") { bump(ok); if (ok) li.dataset.done = "1"; }
-        li.className = ok ? "right" : "wrong";
+        if (row.dataset.done !== "1") { bump(ok); if (ok) row.dataset.done = "1"; }
+        fb.className = "fb " + (ok ? "ok" : "no");
         fb.textContent = ok ? "✓ Correct" : msg;
       });
     }
-    p.querySelectorAll(".ptypes button").forEach(b => b.onclick = () => { type = b.dataset.k; fresh(); });
-    stats(); fresh();
+    fresh();
   }
 
   // ---------- videos ----------
   function videosPanel(p, it) {
-    p.innerHTML = `<div class="videos">${it.videos.map(v => `
+    p.innerHTML = it.videos.map(v => `
       <div class="video" data-id="${v.id}">
-        <button class="vthumb" aria-label="Play ${esc(v.title)}">
-          ${CFG.thumbnails ? `<img loading="lazy" src="https://i.ytimg.com/vi/${v.id}/hqdefault.jpg" alt="">` : ""}
-          <span class="play">▶</span>
-        </button>
-        <div class="vmeta"><b>${esc(v.title)}</b><small>${esc(v.by)}</small>
-          <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener">Watch on YouTube ↗</a></div>
-      </div>`).join("")}</div>`;
-    p.querySelectorAll(".video").forEach(el => el.querySelector(".vthumb").onclick = () => {
-      const id = el.dataset.id;
-      if (!CFG.embedVideos) { window.open(`https://www.youtube.com/watch?v=${id}`, "_blank"); return; }
-      el.querySelector(".vthumb").outerHTML = `<div class="vframe"><iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Video"></iframe></div>`;
+        <p><b>${esc(v.title)}</b> <span class="small">(${esc(v.by)})</span><br>
+        ${CFG.embedVideos ? `<a href="#" data-play>play here</a> &nbsp;|&nbsp; ` : ""}<a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener">watch on YouTube</a></p>
+      </div>`).join("");
+    p.querySelectorAll("[data-play]").forEach(a => a.onclick = e => {
+      e.preventDefault();
+      const el = a.closest(".video");
+      if (el.querySelector("iframe")) return;
+      el.insertAdjacentHTML("beforeend", `<div class="vframe"><iframe src="https://www.youtube-nocookie.com/embed/${el.dataset.id}?autoplay=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Video"></iframe></div>`);
     });
   }
 
   // ---------- sims ----------
   function simsPanel(p, it) {
-    const sims = it.sims;
     let cur = 0;
     const draw = () => {
-      const s = sims[cur];
+      const s = it.sims[cur];
       p.innerHTML = `
-        <div class="sims">
-          ${sims.length > 1 ? `<div class="ptypes">${sims.map((x, k) => `<button data-k="${k}" class="${k === cur ? "on" : ""}">${esc(x.title)}</button>`).join("")}</div>` : ""}
-          <div class="simhead"><div><b>${esc(s.title)}</b><small>${esc(s.blurb)}</small></div><a class="btn" href="${s.file}" target="_blank" rel="noopener">Open in its own tab ↗</a></div>
-          <div class="simframe"><iframe src="${s.file}" title="${esc(s.title)}"></iframe></div>
-        </div>`;
-      p.querySelectorAll(".ptypes button").forEach(b => b.onclick = () => { cur = +b.dataset.k; draw(); });
+        ${it.sims.length > 1 ? `<p>${it.sims.map((x, k) => k === cur ? `<b>${esc(x.title)}</b>` : `<a href="#" data-k="${k}">${esc(x.title)}</a>`).join(" | ")}</p>` : ""}
+        <p><b>${esc(s.title)}.</b> ${esc(s.blurb)} <a href="${s.file}" target="_blank" rel="noopener">Open in its own tab</a></p>
+        <div class="simframe"><iframe src="${s.file}" title="${esc(s.title)}"></iframe></div>`;
+      p.querySelectorAll("[data-k]").forEach(a => a.onclick = e => { e.preventDefault(); cur = +a.dataset.k; draw(); });
     };
     draw();
   }
 
   // ---------- printables ----------
-  function fileLink(f) {
-    return `<a class="file" href="files/${f.file}" target="_blank" rel="noopener">${ICONS.printables}<span><b>${esc(f.title)}</b>${f.note ? `<small>${esc(f.note)}</small>` : ""}</span><span class="pdf">PDF</span></a>`;
-  }
-  function printPanel(p, it, c) {
-    p.innerHTML = `<div class="files">${it.printables.map(fileLink).join("")}</div>`;
+  function printPanel(p, it) {
+    p.innerHTML = `<ul>${it.printables.map(f => `<li>${fileLink(f)}${f.note ? ` <span class="small">· ${esc(f.note)}</span>` : ""}</li>`).join("")}</ul>`;
   }
 
   // ---------- boot ----------
   function route() {
-    const h = decodeURIComponent(location.hash.slice(1));
-    const f = find(h);
+    const f = find(decodeURIComponent(location.hash.slice(1)));
     if (keyHandler && f.view !== "item") { document.removeEventListener("keydown", keyHandler); keyHandler = null; }
-    ({ home, class: classView, unit: unitView, item: itemView })[f.view](f);
-    document.body.dataset.cls = f.c ? f.c.id : "";
+    ({ home, unit: unitView, item: itemView })[f.view](f);
     window.scrollTo(0, 0);
   }
   window.addEventListener("hashchange", route);

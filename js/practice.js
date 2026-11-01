@@ -486,7 +486,7 @@
     return { c, v, th, vs: g3(v), vix: v * Math.cos(th * D2R), viy: v * Math.sin(th * D2R) };
   }
   function splitSteps(vs, th, vix, viy) {
-    return `<b>Split the launch velocity:</b> $$v_{ix} = v_i\\cos\\theta = (${vs})\\cos ${th}^\\circ = ${q(vix, U.ms)} \\qquad v_{iy} = v_i\\sin\\theta = (${vs})\\sin ${th}^\\circ = ${q(viy, U.ms)}$$`;
+    return `<b>Split the launch velocity:</b> $$v_{ix} = v_i\\cos\\theta = (${vs})\\cos ${th}^\\circ = ${q(vix, U.ms)}$$ $$v_{iy} = v_i\\sin\\theta = (${vs})\\sin ${th}^\\circ = ${q(viy, U.ms)}$$`;
   }
   function angledLevel() {
     const { c, v, th, vs, vix, viy } = aGiven();
