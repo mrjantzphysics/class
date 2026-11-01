@@ -1,0 +1,1216 @@
+<title>Projectile Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caladea:ital,wght@0,400;0,700;1,400;1,700&display=swap">
+<style>
+/* Layout: one screen on a desktop. A wide scene on top with a live readout band, then a strip of three cards
+   (settings · column boxes · graphs). Below 941px wide or 620px tall it stacks and scrolls.
+   Color follows the Unit 2 slides: blue = x (horizontal), orange = y (vertical), navy = the full velocity. */
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #1b2433;
+  --muted: #566275;
+  --line: #d3d9e2;
+  --soft: #f5f7fa;
+  --accent: #a84e0c;
+  --tab-on: #14213d;
+  --tab-on-ink: #f6f4ee;
+  --x: #2257b8;
+  --y: #b04a0a;
+  --y-ink: #ffffff;
+  --res: #14213d;
+  --sky: #e6eef8;
+  --grid: #cfd9e6;
+  --ground: #c9b993;
+  --ground-edge: #8f7d55;
+  --cliff: #b7a682;
+  --cliff-edge: #85744f;
+  --ghost: rgba(86, 98, 117, 0.45);
+  --trail: #14213d;
+  --halo: rgba(255, 255, 255, 0.9);
+  --good: #2f7d4a;
+  --bad: #b3261e;
+  --note: #fbebdd;
+  --honors: #7a3aa6;
+  --honors-soft: #f1e8f8;
+  --wood: #9a6b3f;
+  --cup: #c9302c;
+  --pad: #3d9a5b;
+  --leaf: #4c8a3f;
+  --bark: #6e4b2a;
+  --fur: #7b4a26;
+  --banana: #e2b714;
+  --shade: rgba(14, 21, 32, 0.28);
+  --serif: Cambria, Caladea, Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1520; --surface: #162030; --ink: #e6ebf2; --muted: #9eabbf; --line: #2a3850; --soft: #1b2738;
+    --accent: #f0a052; --tab-on: #f0a052; --tab-on-ink: #14213d;
+    --x: #79aefc; --y: #f08a3c; --y-ink: #1b1206; --res: #f2f4f8;
+    --sky: #121d2c; --grid: #22324a; --ground: #3b3428; --ground-edge: #6a5c42; --cliff: #4a4132; --cliff-edge: #7a6a4c;
+    --ghost: rgba(158, 171, 191, 0.45); --trail: #e6ebf2; --halo: rgba(14, 21, 32, 0.88);
+    --good: #62c785; --bad: #ff8077; --note: #2b2116; --honors: #c99bf0; --honors-soft: #2a1f38;
+    --wood: #8a6440; --cup: #ff6b5e; --pad: #5fc27e; --leaf: #5f9e52; --bark: #8a6440; --fur: #b07a4c; --banana: #f2cf3c;
+    --shade: rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1520; --surface: #162030; --ink: #e6ebf2; --muted: #9eabbf; --line: #2a3850; --soft: #1b2738;
+  --accent: #f0a052; --tab-on: #f0a052; --tab-on-ink: #14213d;
+  --x: #79aefc; --y: #f08a3c; --y-ink: #1b1206; --res: #f2f4f8;
+  --sky: #121d2c; --grid: #22324a; --ground: #3b3428; --ground-edge: #6a5c42; --cliff: #4a4132; --cliff-edge: #7a6a4c;
+  --ghost: rgba(158, 171, 191, 0.45); --trail: #e6ebf2; --halo: rgba(14, 21, 32, 0.88);
+  --good: #62c785; --bad: #ff8077; --note: #2b2116; --honors: #c99bf0; --honors-soft: #2a1f38;
+  --wood: #8a6440; --cup: #ff6b5e; --pad: #5fc27e; --leaf: #5f9e52; --bark: #8a6440; --fur: #b07a4c; --banana: #f2cf3c;
+  --shade: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--serif); font-size: 16px; line-height: 1.4;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px 32px;
+}
+.wrap { max-width: 1440px; margin: 0 auto; display: grid; gap: 10px; }
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; min-width: 0; }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0; font-weight: 700; }
+h1 { font-size: 24px; line-height: 1.1; margin: 0; }
+.nav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tab {
+  font: inherit; font-size: 15px; padding: 6px 15px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.tab[aria-selected="true"] { background: var(--tab-on); color: var(--tab-on-ink); border-color: var(--tab-on); font-weight: 700; }
+.tab.try { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.sim { display: grid; gap: 10px; min-width: 0; }
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.readout { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; }
+.stage canvas { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; min-height: 240px; }
+.readout { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 18px; padding: 7px 12px; border-bottom: 1px solid var(--line); font-size: 15px; font-variant-numeric: tabular-nums; }
+.readout b { font-weight: 700; }
+.readout .xc { color: var(--x); } .readout .yc { color: var(--y); }
+.readout .dim { color: var(--muted); font-size: 13px; }
+.msg { margin-left: auto; font-size: 15px; color: var(--ink); text-align: right; }
+.msg.ok { color: var(--good); font-weight: 700; }
+.msg.miss { color: var(--bad); font-weight: 700; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); }
+.group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.group > span, .bar label { font-size: 14px; color: var(--muted); }
+.timeg { flex: 1 1 260px; display: flex; gap: 10px; align-items: center; min-width: 0; }
+.timeg input { flex: 1; min-width: 0; accent-color: var(--res); }
+.timeg output { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.btn {
+  font: inherit; font-size: 15px; padding: 5px 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--soft); color: var(--ink);
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--y); border-color: var(--y); color: var(--y-ink); font-weight: 700; }
+.btn.small { font-size: 13px; padding: 2px 9px; letter-spacing: 0; text-transform: none; font-weight: 400; }
+.btn[aria-pressed="true"] { background: var(--tab-on); color: var(--tab-on-ink); border-color: var(--tab-on); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+select { font: inherit; font-size: 15px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--soft); color: var(--ink); }
+
+.strip { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr) minmax(0, 1.1fr); gap: 10px; min-width: 0; }
+.strip.ch { grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr); }
+@media (max-width: 940px) { .strip, .strip.ch { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.card > * { flex: none; }
+.card h2 select { font-size: 14px; padding: 2px 4px; letter-spacing: 0; text-transform: none; color: var(--ink); }
+.card h2 { font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pill { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--honors-soft); color: var(--honors); white-space: nowrap; }
+.score { font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.row { display: grid; grid-template-columns: 6.6em minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 15px; }
+.row input[type="range"] { width: 100%; min-width: 0; margin: 0; accent-color: var(--res); }
+.row.honor input[type="range"] { accent-color: var(--honors); }
+.row output { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.field { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; }
+.num { display: inline-flex; align-items: center; gap: 4px; font-size: 15px; white-space: nowrap; }
+.num input {
+  font: inherit; font-size: 15px; width: 4.3em; padding: 2px 5px; text-align: right; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--soft); color: var(--ink);
+}
+.num .u { display: inline-block; min-width: 1.9em; }
+.num input:disabled { opacity: 1; background: var(--note); border-color: transparent; font-weight: 700; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets .btn { font-size: 14px; padding: 3px 9px; }
+.checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 10px; }
+.checks label { display: flex; gap: 7px; align-items: center; font-size: 14px; cursor: pointer; }
+.checks input { accent-color: var(--tab-on); width: 15px; height: 15px; flex: none; }
+.air { border: 1px dashed var(--honors); border-radius: 8px; padding: 4px 10px; }
+.air[open] { border-style: solid; padding-bottom: 10px; }
+.air summary { cursor: pointer; font-size: 15px; color: var(--honors); font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 2px 0; }
+.air { min-width: 0; }
+.air > div { display: grid; gap: 8px; margin-top: 6px; }
+.air .checks { grid-template-columns: minmax(0, 1fr); }
+.air .checks input { accent-color: var(--honors); }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.note { background: var(--note); border-radius: 8px; padding: 8px 10px; font-size: 14px; margin: 0; }
+.sw { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; position: relative; top: -2px; }
+.sw.x { background: var(--x); } .sw.y { background: var(--y); } .sw.res { background: var(--res); height: 4px; }
+.sw.ghost { background: var(--ghost); }
+
+i.v { font-style: italic; }
+sub, sup { font-size: 0.7em; font-style: normal; line-height: 0; }
+.cols { overflow-x: auto; }
+.cols table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 15px; line-height: 1.35; }
+.cols th, .cols td { padding: 2px 6px; text-align: left; white-space: nowrap; }
+.cols thead th { font-weight: 700; font-size: 14px; }
+.cols thead th.x { color: var(--x); } .cols thead th.y { color: var(--y); }
+.cols td:first-child { color: var(--muted); font-size: 13px; padding-left: 0; }
+.cols tr + tr td { border-top: 1px solid var(--line); }
+.cols td.t { text-align: center; }
+.unk { color: var(--muted); font-style: italic; }
+.eqs { display: grid; gap: 6px; justify-items: center; align-content: center; font-size: 18px; margin: 0; flex: 1; }
+.eqs p { margin: 0; }
+dl.read { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 12px; margin: 0; font-size: 15px; }
+dl.read dt { color: var(--muted); }
+dl.read dd { margin: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+dl.read dd small { font-weight: 400; color: var(--muted); font-size: 13px; }
+.graphs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.graphs canvas { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 6px; background: var(--soft); }
+.desc { margin: 0; font-size: 15px; }
+.sol { background: var(--soft); border-radius: 8px; padding: 8px 10px; font-size: 14px; margin: 0; }
+
+/* Scene with the graphs beside it; settings and column boxes below */
+.top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; }
+.strip.two { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
+.setgrid, .colgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 18px; align-items: start; }
+.setcol, .colmain, .colside { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.setcol .checks { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 941px) {
+  .top { grid-template-columns: minmax(0, 1fr) clamp(300px, 31%, 470px); }
+  .setgrid { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+  .colgrid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+}
+@media (max-width: 940px) { .strip.two { grid-template-columns: minmax(0, 1fr); } }
+
+/* status message floats over the top of the scene */
+.view { position: relative; min-height: 0; min-width: 0; }
+.view .msg {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 120px); margin: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 2px 14px;
+  font-size: 14px; text-align: center; box-shadow: 0 2px 8px var(--shade); pointer-events: none;
+}
+.view .msg:empty { display: none; }
+.stage.nohead { grid-template-rows: minmax(0, 1fr) auto; }
+.cols th.ctitle { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding-left: 0; }
+.colside .btn.small { justify-self: end; }
+dl.read dt small { font-size: 12px; }
+
+/* Desktop: fill the screen exactly, no page scroll */
+@media (min-width: 941px) and (min-height: 620px) {
+  html, body { height: 100%; }
+  body { padding-block: 8px; }
+  .wrap { height: 100%; grid-template-rows: auto minmax(0, 1fr); }
+  .sim { grid-template-rows: minmax(0, 1fr) auto; min-height: 0; }
+  .stage { min-height: 0; }
+  .stage canvas { aspect-ratio: auto; height: 100%; min-height: 0; }
+  .view { height: 100%; }
+  .strip { height: clamp(248px, 37vh, 340px); }
+  .strip .card { overflow-y: auto; }
+  .card.gr { overflow: hidden; }
+  .top { min-height: 0; }
+  .top .card.gr { min-height: 0; }
+  .strip.two { height: auto; max-height: 46vh; }
+  .strip.two .card { overflow-y: auto; }
+  .card.gr .graphs { flex: 1; min-height: 0; grid-template-rows: repeat(2, minmax(0, 1fr)); }
+  .card.gr .graphs canvas { aspect-ratio: auto; height: 100%; }
+}
+
+/* Try this drawer */
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 20; width: min(400px, 100%);
+  background: var(--surface); border-left: 1px solid var(--line); box-shadow: -10px 0 30px var(--shade);
+  overflow-y: auto; display: grid; align-content: start; gap: 12px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) 18px;
+}
+.drawer-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.drawer-head h2 { margin: 0; font-size: 22px; }
+.prompts { display: grid; gap: 10px; }
+.prompt { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 0; }
+.prompt.honors { border-color: var(--honors); }
+.prompt h3 { margin: 0 0 4px; font-size: 17px; text-wrap: balance; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.prompt p { margin: 0; font-size: 15px; }
+.prompt .q { margin-top: 6px; color: var(--muted); }
+.legend { font-size: 14px; color: var(--muted); display: grid; gap: 4px; border-top: 1px solid var(--line); padding-top: 10px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Projectile Lab</h1>
+      <p class="eyebrow">Physics · Unit 2 · Projectile Motion</p>
+    </div>
+    <div class="nav">
+      <div class="nav" role="tablist" aria-label="Simulation">
+        <button class="tab" role="tab" id="tab-launch" aria-controls="launch" aria-selected="true">Launcher</button>
+        <button class="tab" role="tab" id="tab-chal" aria-controls="chal" aria-selected="false">Target challenges</button>
+      </div>
+      <button class="tab try" id="try-open" aria-expanded="false" aria-controls="drawer">Try this ▸</button>
+    </div>
+  </header>
+
+  <!-- ======================= LAUNCHER ======================= -->
+  <section id="launch" class="sim" role="tabpanel" aria-labelledby="tab-launch">
+    <div class="top">
+    <div class="stage">
+      <div class="readout" aria-label="Live readout">
+        <span><i class="v">t</i> = <b id="r-t"></b></span>
+        <span><i class="v">x</i> = <b id="r-x"></b></span>
+        <span><i class="v">y</i> = <b id="r-y"></b></span>
+        <span class="xc"><i class="v">v</i><sub>x</sub> = <b id="r-vx"></b></span>
+        <span class="yc"><i class="v">v</i><sub>y</sub> = <b id="r-vy"></b></span>
+        <span><i class="v">v</i> = <b id="r-sp"></b>, <span id="r-dir"></span></span>
+        <span class="airrow" hidden><i class="v">a</i><sub>x</sub>, <i class="v">a</i><sub>y</sub> = <b id="r-acc"></b></span>
+        <span class="dim" id="r-dots"></span>
+      </div>
+      <div class="view"><canvas id="ln-scene" aria-label="Side view of a ball launched from a height"></canvas><div class="msg" id="ln-status" aria-live="polite"></div></div>
+      <div class="bar">
+        <div class="group">
+          <button class="btn primary" id="ln-go">Launch</button>
+          <button class="btn" id="ln-pause">Pause</button>
+          <button class="btn" id="ln-reset">Reset</button>
+        </div>
+        <div class="timeg">
+          <label for="ln-t">Time</label>
+          <input type="range" id="ln-t" min="0" max="1" step="0.001" value="0">
+          <output id="ln-t-o"></output>
+        </div>
+        <div class="group">
+          <span>Speed</span>
+          <select id="ln-speed" aria-label="Simulation speed">
+            <option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option>
+          </select>
+          <button class="btn" id="ln-clear">Clear old paths</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card gr">
+        <h2>Motion graphs</h2>
+        <div class="graphs">
+          <canvas id="g-x" aria-label="Graph of x position against time"></canvas>
+          <canvas id="g-y" aria-label="Graph of y position against time"></canvas>
+          <canvas id="g-vx" aria-label="Graph of horizontal velocity against time"></canvas>
+          <canvas id="g-vy" aria-label="Graph of vertical velocity against time"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="strip two">
+      <div class="card">
+        <h2>Launch settings
+          <select id="ln-preset" aria-label="Quick setup">
+            <option value="">Quick setup…</option>
+            <option value="hor">Horizontal launch</option>
+            <option value="lvl">Level ground</option>
+            <option value="cliff">Off a cliff</option>
+          </select>
+        </h2>
+        <div class="setgrid"><div class="setcol">
+        <div class="row">
+          <label for="ln-v-n">Speed, <i class="v">v</i><sub>i</sub></label>
+          <input type="range" id="ln-v" min="0" max="40" step="0.5" value="20" aria-label="Launch speed slider">
+          <span class="num"><input type="number" id="ln-v-n" min="0" max="40" step="0.1" value="20"><span class="u">m/s</span></span>
+        </div>
+        <div class="row">
+          <label for="ln-a-n">Angle, <i class="v">θ</i></label>
+          <input type="range" id="ln-a" min="-45" max="90" step="1" value="40" aria-label="Launch angle slider">
+          <span class="num"><input type="number" id="ln-a-n" min="-45" max="90" step="0.5" value="40"><span class="u">°</span></span>
+        </div>
+        <div class="row">
+          <label for="ln-h-n">Height, <i class="v">y</i><sub>i</sub></label>
+          <input type="range" id="ln-h" min="0" max="60" step="1" value="10" aria-label="Launch height slider">
+          <span class="num"><input type="number" id="ln-h-n" min="0" max="60" step="0.5" value="10"><span class="u">m</span></span>
+        </div>
+        </div><div class="setcol">
+        <div class="checks">
+          <label><input type="checkbox" id="ln-c-vec" checked> Arrows on the ball</label>
+          <label><input type="checkbox" id="ln-c-dots" checked> Strobe dots</label>
+          <label><input type="checkbox" id="ln-c-dvec"> Arrows at every dot</label>
+          <label><input type="checkbox" id="ln-c-hide"> Hide answers (predict)</label>
+        </div>
+        <details class="air" id="ln-air-box">
+          <summary>Air resistance <span class="pill">Honors</span></summary>
+          <div>
+            <div class="checks"><label><input type="checkbox" id="ln-air"> Turn on air resistance</label></div>
+            <div class="field">
+              <label for="ln-ball">Ball</label>
+              <select id="ln-ball">
+                <option value="145">Shot put</option>
+                <option value="33" selected>Baseball</option>
+                <option value="22">Tennis ball</option>
+                <option value="9">Ping-pong ball</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            <div class="row honor">
+              <label for="ln-vt">Terminal speed</label>
+              <input type="range" id="ln-vt" min="5" max="150" step="1" value="33">
+              <output id="ln-vt-o"></output>
+            </div>
+            <p class="hint">Air pushes against the ball's motion, harder the faster it goes (drag grows with <i class="v">v</i><sup>2</sup>). Terminal speed is the fastest the ball could ever fall, so a lower terminal speed means the air matters more. The dashed gray path is the same launch with no air.</p>
+          </div>
+        </details>
+        </div></div>
+      </div>
+
+      <div class="card">
+        <div class="colgrid"><div class="colmain">
+        <div class="cols" id="ln-cols">
+          <table>
+            <thead><tr><th class="ctitle">Column boxes</th><th class="x"><i class="v">x</i> (horizontal)</th><th class="y"><i class="v">y</i> (vertical)</th></tr></thead>
+            <tbody>
+              <tr><td>Initial position</td><td><i class="v">x</i><sub>i</sub> = <span id="c-xi"></span></td><td><i class="v">y</i><sub>i</sub> = <span id="c-yi"></span></td></tr>
+              <tr><td>Final position</td><td><i class="v">x</i><sub>f</sub> = <span id="c-xf"></span></td><td><i class="v">y</i><sub>f</sub> = <span id="c-yf"></span></td></tr>
+              <tr><td>Initial velocity</td><td><i class="v">v</i><sub>ix</sub> = <span id="c-vix"></span></td><td><i class="v">v</i><sub>iy</sub> = <span id="c-viy"></span></td></tr>
+              <tr><td>Final velocity</td><td><i class="v">v</i><sub>fx</sub> = <span id="c-vfx"></span></td><td><i class="v">v</i><sub>fy</sub> = <span id="c-vfy"></span></td></tr>
+              <tr><td>Acceleration</td><td><i class="v">a</i><sub>x</sub> = <span id="c-ax"></span></td><td><i class="v">a</i><sub>y</sub> = <span id="c-ay"></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="eqs" id="ln-eqs" hidden>
+          <p><i class="v">x</i><sub>f</sub> = <i class="v">v</i><sub>ix</sub><i class="v">t</i> + <i class="v">x</i><sub>i</sub></p>
+          <p><i class="v">y</i><sub>f</sub> = ½<i class="v">a</i><sub>y</sub><i class="v">t</i><sup>2</sup> + <i class="v">v</i><sub>iy</sub><i class="v">t</i> + <i class="v">y</i><sub>i</sub></p>
+          <p><i class="v">v</i><sub>fy</sub> = <i class="v">a</i><sub>y</sub><i class="v">t</i> + <i class="v">v</i><sub>iy</sub></p>
+          <p><i class="v">v</i><sub>fy</sub><sup>2</sup> = <i class="v">v</i><sub>iy</sub><sup>2</sup> + 2<i class="v">a</i><sub>y</sub>(<i class="v">y</i><sub>f</sub> − <i class="v">y</i><sub>i</sub>)</p>
+        </div>
+        </div><div class="colside">
+        <button class="btn small" id="ln-eqbtn" aria-pressed="false">Show equations</button>
+        <p class="note" id="ln-air-note" hidden>With air on, <i class="v">a</i><sub>x</sub> and <i class="v">a</i><sub>y</sub> change during the flight, so the kinematic equations don't apply. These values come from a step-by-step computer model.</p>
+        <dl class="read" id="ln-flight">
+          <dt>Time, <i class="v">t</i> <small>(same for <i class="v">x</i> and <i class="v">y</i>)</small></dt><dd id="w-t"></dd>
+          <dt>Distance, Δ<i class="v">x</i></dt><dd id="w-dx"></dd>
+          <dt>Maximum height, <i class="v">y</i><sub>max</sub></dt><dd id="w-ymax"></dd>
+          <dt>Speed at impact</dt><dd id="w-vf"></dd>
+          <dt>Impact direction</dt><dd id="w-ang"></dd>
+          <dt class="airrow" hidden>Same launch, no air</dt><dd class="airrow" id="w-noair" hidden></dd>
+          <dt class="airrow" hidden>Angle with the longest Δ<i class="v">x</i></dt><dd class="airrow" id="w-best" hidden></dd>
+        </dl>
+        </div></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======================= CHALLENGES ======================= -->
+  <section id="chal" class="sim" role="tabpanel" aria-labelledby="tab-chal" hidden>
+    <div class="stage nohead">
+      <div class="view"><canvas id="ch-scene" aria-label="Side view of the current target challenge"></canvas><div class="msg" id="ch-status" aria-live="polite"></div></div>
+      <div class="bar">
+        <div class="group">
+          <button class="btn primary" id="ch-go">Launch</button>
+          <button class="btn" id="ch-again">Try again</button>
+          <button class="btn" id="ch-new">New setup</button>
+        </div>
+        <div class="group">
+          <span>Speed</span>
+          <select id="ch-speed" aria-label="Simulation speed">
+            <option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="strip ch">
+      <div class="card">
+        <h2>Challenge <span class="score" id="ch-score"></span></h2>
+        <div class="field">
+          <label for="ch-type">Choose one</label>
+          <select id="ch-type">
+            <option value="cup">Land in the cup</option>
+            <option value="cliff">Hit the target from a cliff</option>
+            <option value="ledge">Onto the ledge</option>
+            <option value="monkey">Monkey and hunter</option>
+          </select>
+        </div>
+        <p class="desc" id="ch-desc"></p>
+      </div>
+
+      <div class="card">
+        <h2>Given</h2>
+        <dl class="read" id="ch-givens"></dl>
+      </div>
+
+      <div class="card">
+        <h2>Your launch</h2>
+        <div class="field">
+          <label for="ch-v">Launch speed, <i class="v">v</i><sub>i</sub></label>
+          <span class="num"><input type="number" id="ch-v" min="0" max="60" step="0.01" value="2"><span class="u">m/s</span></span>
+        </div>
+        <div class="field">
+          <label for="ch-a">Launch angle, <i class="v">θ</i></label>
+          <span class="num"><input type="number" id="ch-a" min="-45" max="89" step="0.1" value="0"><span class="u">°</span></span>
+        </div>
+        <div class="presets">
+          <button class="btn" id="ch-aim" hidden>Aim straight at the monkey</button>
+          <button class="btn" id="ch-reveal" disabled>Show a solution</button>
+        </div>
+        <p class="hint">Work it out on paper first, then type your answer and launch. Shaded boxes are given.</p>
+        <p class="sol" id="ch-sol" hidden></p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<aside class="drawer" id="drawer" aria-label="Try this" hidden>
+  <div class="drawer-head">
+    <h2>Try this</h2>
+    <button class="btn" id="try-close">Close</button>
+  </div>
+  <section class="prompts" id="ln-prompts" aria-label="Try this: launcher">
+    <div class="prompt"><h3>Watch the components</h3><p>Turn on <b>Arrows at every dot</b> and launch at 50°.</p><p class="q">Which arrow keeps the same length and which one changes? What does that tell you about <i class="v">a</i><sub>x</sub> and <i class="v">a</i><sub>y</sub>?</p></div>
+    <div class="prompt"><h3>Same distance, two angles</h3><p>Click <b>Level ground</b>, then launch at 30° and again at 60° with the same speed.</p><p class="q">What do the two paths share? Find another pair of angles that does the same thing. What is the rule?</p></div>
+    <div class="prompt"><h3>Top of the path</h3><p>Launch, then drag the time slider to the highest point.</p><p class="q">What is <i class="v">v</i><sub>y</sub> there? Is the ball's speed zero at the top? Check the graphs.</p></div>
+    <div class="prompt"><h3>Launch from a height</h3><p>Set the launch height to 30 m and try angles between 30° and 50°.</p><p class="q">Is 45° still the angle that goes the farthest? Why would a higher launch change the best angle?</p></div>
+    <div class="prompt honors"><h3>Add air <span class="pill">Honors extension</span></h3><p>Open <b>Air resistance</b>, turn it on with a baseball, and launch at 45° and 30 m/s from level ground.</p><p class="q">Is the path still symmetric? Which way does <i class="v">a</i><sub>x</sub> point, and why? Is 45° still the best angle?</p></div>
+  </section>
+  <section class="prompts" id="ch-prompts" aria-label="Try this: challenges" hidden>
+    <div class="prompt"><h3>Land in the cup</h3><p>Fill in the column boxes first. The fall time comes from the <i class="v">y</i> column, and the speed comes from the <i class="v">x</i> column.</p><p class="q">Remember that the ball only has to fall to the top of the cup, not to the floor.</p></div>
+    <div class="prompt"><h3>Hit the target from a cliff</h3><p>When the angle is the unknown, more than one answer can work.</p><p class="q">Can you find two different angles that both hit the target?</p></div>
+    <div class="prompt"><h3>Onto the ledge</h3><p>Landing at the right distance isn't enough. The ball also has to clear the corner of the ledge.</p><p class="q">Where is the ball when <i class="v">x</i> reaches the edge of the ledge?</p></div>
+    <div class="prompt"><h3>Monkey and hunter</h3><p>The monkey lets go of the branch the instant the banana is launched.</p><p class="q">Aim straight at the monkey. Does it work at every speed? Find the slowest speed that still reaches the monkey before it hits the ground.</p></div>
+  </section>
+  <div class="legend">
+    <span><span class="sw x"></span>Horizontal (<i class="v">x</i>) component</span>
+    <span><span class="sw y"></span>Vertical (<i class="v">y</i>) component</span>
+    <span><span class="sw res"></span>Full velocity</span>
+    <span><span class="sw ghost"></span>Earlier launches</span>
+    <span>Ground is <i class="v">y</i> = 0. <i class="v">g</i> = 9.8 m/s<sup>2</sup>, so <i class="v">a</i><sub>y</sub> = −9.8 m/s<sup>2</sup>.</span>
+  </div>
+</aside>
+
+<script>
+(() => {
+"use strict";
+const G = 9.8, DEG = Math.PI / 180;
+const FONT = 'Cambria, Caladea, Georgia, serif';
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const $ = id => document.getElementById(id);
+const minus = s => s.replace(/^-/, '−');
+const fx = (x, d) => { if (!isFinite(x)) return '—'; let s = x.toFixed(d); if (/^-0\.?0*$/.test(s)) s = s.slice(1); return minus(s); };
+// three significant figures without exponent notation
+const f3 = x => { if (x === 0) return '0'; const a = Math.abs(x); return fx(x, a >= 100 ? 0 : a >= 10 ? 1 : 2); };
+const rnd = (a, b, d) => +(a + Math.random() * (b - a)).toFixed(d);
+
+/* ---------- theme colors for canvas ---------- */
+const C = {};
+const TOK = { ink: '--ink', muted: '--muted', line: '--line', soft: '--soft', surface: '--surface', x: '--x', y: '--y', res: '--res',
+  sky: '--sky', grid: '--grid', ground: '--ground', groundEdge: '--ground-edge', cliff: '--cliff', cliffEdge: '--cliff-edge',
+  ghost: '--ghost', trail: '--trail', halo: '--halo', good: '--good', bad: '--bad', honors: '--honors', accent: '--accent',
+  wood: '--wood', cup: '--cup', pad: '--pad', leaf: '--leaf', bark: '--bark', fur: '--fur', banana: '--banana' };
+function readColors() { const cs = getComputedStyle(document.documentElement); for (const k in TOK) C[k] = cs.getPropertyValue(TOK[k]).trim(); }
+readColors();
+const recolor = () => { readColors(); dirty = true; };
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', recolor); } catch (e) {}
+new MutationObserver(recolor).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* ---------- canvas helpers ---------- */
+let dirty = true;
+function makeCanvas(el) {
+  const o = { el, ctx: el.getContext('2d'), w: 0, h: 0 };
+  const fit = () => {
+    const r = el.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    if (!r.width) return;
+    o.w = r.width; o.h = r.height;
+    el.width = Math.round(r.width * d); el.height = Math.round(r.height * d);
+    o.ctx.setTransform(d, 0, 0, d, 0, 0);
+    dirty = true;
+  };
+  new ResizeObserver(fit).observe(el); fit();
+  return o;
+}
+function arrow(ctx, x1, y1, x2, y2, color, lw = 3, halo = true) {
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+  if (L < 3) return;
+  const hl = Math.min(lw * 3 + 5, L * 0.5), hw = hl * 0.55, ux = dx / L, uy = dy / L;
+  const bx = x2 - ux * hl, by = y2 - uy * hl;
+  const shaft = () => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(bx + ux, by + uy); };
+  const head = () => { ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(bx - uy * hw, by + ux * hw); ctx.lineTo(bx + uy * hw, by - ux * hw); ctx.closePath(); };
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (halo) { ctx.strokeStyle = C.halo; ctx.lineWidth = lw + 4; shaft(); ctx.stroke(); head(); ctx.lineWidth = 4; ctx.stroke(); }
+  ctx.strokeStyle = color; ctx.lineWidth = lw; shaft(); ctx.stroke();
+  ctx.fillStyle = color; head(); ctx.fill();
+}
+// mixed-style text: parts = [[text, 'n' | 'i' | 's'], ...]  (normal, italic, subscript)
+function mtext(ctx, parts, x, y, o = {}) {
+  const { size = 14, color = C.ink, align = 'left', bold = false, halo = true, base = 'middle' } = o;
+  if (typeof parts === 'string') parts = [[parts, 'n']];
+  const w = bold ? '700 ' : '';
+  const fontOf = k => k === 'i' ? `italic ${w}${size}px ${FONT}` : k === 's' ? `${w}${Math.round(size * 0.72)}px ${FONT}` : `${w}${size}px ${FONT}`;
+  let tw = 0;
+  const ws = parts.map(([s, k]) => { ctx.font = fontOf(k); const m = ctx.measureText(s).width + (k === 's' ? 1 : 0); tw += m; return m; });
+  let cx = align === 'center' ? x - tw / 2 : align === 'right' ? x - tw : x;
+  ctx.textAlign = 'left'; ctx.textBaseline = base;
+  parts.forEach(([s, k], i) => {
+    ctx.font = fontOf(k); const py = k === 's' ? y + size * 0.28 : y;
+    if (halo) { ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = C.halo; ctx.strokeText(s, cx, py); }
+    ctx.fillStyle = color; ctx.fillText(s, cx, py); cx += ws[i];
+  });
+  return tw;
+}
+function dashed(ctx, pts, color, lw = 2, dash = [6, 5]) {
+  if (pts.length < 2) return;
+  ctx.save(); ctx.setLineDash(dash); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const p of pts) ctx.lineTo(p[0], p[1]); ctx.stroke(); ctx.restore();
+}
+function poly(ctx, pts, color, lw = 2.5) {
+  if (pts.length < 2) return;
+  ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const p of pts) ctx.lineTo(p[0], p[1]); ctx.stroke();
+}
+function dot(ctx, x, y, r, fill, stroke) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill();
+  if (stroke) { ctx.lineWidth = 1.5; ctx.strokeStyle = stroke; ctx.stroke(); }
+}
+function cross(ctx, x, y, color) {
+  ctx.save(); ctx.lineCap = 'round'; const d = 6;
+  const p = () => { ctx.beginPath(); ctx.moveTo(x - d, y - d); ctx.lineTo(x + d, y + d); ctx.moveTo(x + d, y - d); ctx.lineTo(x - d, y + d); };
+  ctx.strokeStyle = C.halo; ctx.lineWidth = 6; p(); ctx.stroke(); ctx.strokeStyle = color; ctx.lineWidth = 2.5; p(); ctx.stroke(); ctx.restore();
+}
+const NICE = [0.5, 1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 15, 18, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 150, 200, 250, 300, 400, 500, 600, 800, 1000, 1500, 2000];
+const niceUp = x => { for (const n of NICE) if (n >= x) return n; return Math.ceil(x / 1000) * 1000; };
+function niceStep(pxPerUnit, minPx) {
+  for (const s of [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000]) if (s * pxPerUnit >= minPx) return s;
+  return 2000;
+}
+function niceNum(range) {
+  if (!(range > 0)) return 1;
+  const e = Math.pow(10, Math.floor(Math.log10(range))), f = range / e;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e;
+}
+const tickLabel = (v, step) => fx(v, step < 0.1 ? 2 : step < 1 ? 1 : 0);
+
+// world → screen transform with equal scale on both axes, anchored at the bottom left
+function fitView(cv, xmin, xmax, ymax, pad = { l: 14, r: 16, t: 30, b: 36 }) {
+  const s = Math.min((cv.w - pad.l - pad.r) / (xmax - xmin), (cv.h - pad.t - pad.b) / ymax);
+  const ox = pad.l - xmin * s, oy = cv.h - pad.b;
+  return { s, ox, oy, X: x => ox + x * s, Y: y => oy - y * s, xmin, xr: (cv.w - ox) / s, yr: oy / s };
+}
+function drawBackdrop(ctx, cv, V, opt = {}) {
+  ctx.fillStyle = opt.indoor ? C.soft : C.sky; ctx.fillRect(0, 0, cv.w, cv.h);
+  const step = niceStep(V.s, 48);
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = 0; x <= V.xr; x += step) { ctx.moveTo(V.X(x) + 0.5, 0); ctx.lineTo(V.X(x) + 0.5, V.oy); }
+  for (let y = step; y <= V.yr; y += step) { ctx.moveTo(0, V.Y(y) + 0.5); ctx.lineTo(cv.w, V.Y(y) + 0.5); }
+  ctx.stroke();
+  ctx.fillStyle = C.ground; ctx.fillRect(0, V.oy, cv.w, cv.h - V.oy);
+  ctx.strokeStyle = C.groundEdge; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, V.oy); ctx.lineTo(cv.w, V.oy); ctx.stroke();
+  // distance labels along the ground, heights up the left edge
+  for (let x = step; V.X(x) <= cv.w - 52; x += step) {
+    ctx.strokeStyle = C.groundEdge; ctx.beginPath(); ctx.moveTo(V.X(x), V.oy); ctx.lineTo(V.X(x), V.oy + 5); ctx.stroke();
+    mtext(ctx, tickLabel(x, step), V.X(x), V.oy + 15, { size: 12, color: C.ink, align: 'center', halo: false });
+  }
+  mtext(ctx, [['x', 'i'], [' (m)', 'n']], cv.w - 8, V.oy + 15, { size: 12, color: C.muted, align: 'right', halo: false });
+  for (let y = step; y <= V.yr - step * 0.3; y += step) mtext(ctx, tickLabel(y, step), 6, V.Y(y), { size: 12, color: C.muted });
+  mtext(ctx, [['y', 'i'], [' (m)', 'n']], 6, 12, { size: 12, color: C.muted });
+}
+function drawCannon(ctx, x, y, angDeg, s) {
+  const len = 26, th = angDeg * DEG;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-th);
+  ctx.fillStyle = C.res; ctx.strokeStyle = C.halo; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(-8, -6, len + 8, 12, 4); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  dot(ctx, x, y, 7, C.muted, C.halo);
+}
+function drawBall(ctx, x, y, color = C.y) { dot(ctx, x, y, 6.5, color, C.halo); }
+
+/* ---------- physics ---------- */
+// Path of a ball launched from (0, h). Without air it is exact; with quadratic drag it is stepped with RK4.
+function trajectory(v, angDeg, h, air, vt) {
+  const th = angDeg * DEG, vx0 = v * Math.cos(th), vy0 = v * Math.sin(th);
+  if (!air) {
+    let T = (vy0 + Math.sqrt(vy0 * vy0 + 2 * G * h)) / G;
+    if (!(T > 1e-6) || (h <= 0 && vy0 <= 0)) T = 0;
+    const at = t => ({ t, x: vx0 * t, y: h + vy0 * t - 0.5 * G * t * t, vx: vx0, vy: vy0 - G * t, ax: 0, ay: -G });
+    const tTop = vy0 > 0 ? Math.min(vy0 / G, T) : 0;
+    return { T, at, air: false, vx0, vy0, h, tTop, ymax: at(tTop).y };
+  }
+  const k = G / (vt * vt), dt = 0.002;
+  const f = u => { const sp = Math.hypot(u[2], u[3]); return [u[2], u[3], -k * sp * u[2], -G - k * sp * u[3]]; };
+  const ts = [0], S = [[0, h, vx0, vy0]];
+  let T = 0;
+  if (!(h <= 0 && vy0 <= 0)) {
+    let s = S[0], t = 0;
+    while (t < 200) {
+      const k1 = f(s), a = s.map((q, i) => q + k1[i] * dt / 2), k2 = f(a), b = s.map((q, i) => q + k2[i] * dt / 2), k3 = f(b),
+        c = s.map((q, i) => q + k3[i] * dt), k4 = f(c);
+      const n = s.map((q, i) => q + dt / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]));
+      if (n[1] < 0) {
+        const fr = s[1] / (s[1] - n[1]);
+        T = t + fr * dt; ts.push(T); S.push(s.map((q, i) => q + (n[i] - q) * fr)); break;
+      }
+      t += dt; ts.push(t); S.push(n); s = n;
+    }
+  }
+  const at = t => {
+    t = clamp(t, 0, T);
+    let i = Math.min(Math.floor(t / dt), ts.length - 2); if (i < 0) i = 0;
+    const j = Math.min(i + 1, ts.length - 1), span = ts[j] - ts[i], u = span > 0 ? (t - ts[i]) / span : 0;
+    const q = S[i].map((v0, m) => v0 + (S[j][m] - v0) * u), d = f(q);
+    return { t, x: q[0], y: q[1], vx: q[2], vy: q[3], ax: d[2], ay: d[3] };
+  };
+  let iTop = 0; for (let i = 1; i < S.length; i++) if (S[i][1] > S[iTop][1]) iTop = i;
+  return { T, at, air: true, vx0, vy0, h, tTop: ts[iTop], ymax: S[iTop][1] };
+}
+function sample(tr, t1, n) { const out = []; for (let i = 0; i <= n; i++) out.push(tr.at(t1 * i / n)); return out; }
+function bestAngleAir(v, h, vt) {
+  let best = 0, bx = -1;
+  const scan = (a0, a1, st) => { for (let a = a0; a <= a1 + 1e-9; a += st) { const tr = trajectory(v, a, h, true, vt); const x = tr.at(tr.T).x; if (x > bx) { bx = x; best = a; } } };
+  scan(0, 89, 1); const c = best; scan(Math.max(0, c - 1), Math.min(89, c + 1), 0.1);
+  return best;
+}
+
+/* =====================================================================
+   LAUNCHER
+   ===================================================================== */
+const L = { v: 20, a: 40, h: 10, air: false, vt: 33, t: 0, running: false, launched: false, done: false,
+  tr: null, free: null, ghosts: [], speed: 1, best: null };
+const sc = makeCanvas($('ln-scene'));
+const graphs = { x: makeCanvas($('g-x')), y: makeCanvas($('g-y')), vx: makeCanvas($('g-vx')), vy: makeCanvas($('g-vy')) };
+
+function hiddenNow() { return $('ln-c-hide').checked && !L.done; }
+function recompute() {
+  L.tr = trajectory(L.v, L.a, L.h, L.air, L.vt);
+  L.free = L.air ? trajectory(L.v, L.a, L.h, false) : null;
+  L.best = L.air && L.v > 0 ? bestAngleAir(L.v, L.h, L.vt) : null;
+  L.t = 0; L.running = false; L.launched = false; L.done = false;
+  refreshLaunch();
+}
+function strobeDt(T) { for (const d of [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5]) if (T / d <= 14) return d; return 10; }
+
+function launchView() {
+  let X, Y;
+  const hide = hiddenNow();
+  if (hide || !L.tr.T) {
+    X = (L.v / G) * Math.sqrt(L.v * L.v + 2 * G * L.h); Y = L.h + L.v * L.v / (2 * G);
+  } else {
+    const trs = [L.tr, L.free].filter(Boolean);
+    X = Math.max(...trs.map(t => t.at(t.T).x)); Y = Math.max(L.h, ...trs.map(t => t.ymax));
+  }
+  X = niceUp(Math.max(X, 2) * 1.04); Y = niceUp(Math.max(Y, 1) * 1.06);
+  const left = Math.max(X, Y * 1.6) * 0.1;
+  return fitView(sc, -left, X, Y, { l: 14, r: 16, t: 36, b: 36 });
+}
+
+function drawLaunch() {
+  const { ctx } = sc; if (!sc.w) return;
+  const tr = L.tr, V = launchView(), hide = hiddenNow(), T = tr.T;
+  drawBackdrop(ctx, sc, V);
+  // cliff or platform
+  if (L.h > 0) {
+    ctx.fillStyle = C.cliff; ctx.fillRect(0, V.Y(L.h), V.X(0), V.oy - V.Y(L.h));
+    ctx.strokeStyle = C.cliffEdge; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, V.Y(L.h)); ctx.lineTo(V.X(0), V.Y(L.h)); ctx.lineTo(V.X(0), V.oy); ctx.stroke();
+    mtext(ctx, [['y', 'i'], ['i', 's'], [` = ${f3(L.h)} m`, 'n']], V.X(0) + 8, (V.Y(L.h) + V.oy) / 2, { size: 13 });
+  }
+  // earlier launches
+  for (const g of L.ghosts) {
+    const pts = g.pts.map(p => [V.X(p[0]), V.Y(p[1])]);
+    poly(ctx, pts, C.ghost, 2);
+    const e = pts[pts.length - 1];
+    mtext(ctx, g.label, e[0], e[1] - 12, { size: 11, color: C.muted, align: 'center' });
+  }
+  const P = p => [V.X(p.x), V.Y(p.y)];
+  // same launch without air
+  if (L.free && !hide) {
+    const pts = sample(L.free, L.free.T, 120).map(P);
+    dashed(ctx, pts, C.muted, 1.6);
+    const e = pts[pts.length - 1]; mtext(ctx, 'no air', e[0], e[1] - 12, { size: 12, color: C.muted, align: 'center' });
+  }
+  // predicted path before launch
+  if (!L.launched && !hide && T > 0) dashed(ctx, sample(tr, T, 120).map(P), C.trail, 1.4, [3, 5]);
+  const t = L.t, cur = tr.at(t);
+  if (L.launched && t > 0) poly(ctx, sample(tr, t, Math.max(4, Math.ceil(120 * t / (T || 1)))).map(P), C.trail, 2.4);
+  // strobe dots
+  const sd = strobeDt(T);
+  let maxSp = Math.max(L.v, 1);
+  if (T > 0) { const e = tr.at(T); maxSp = Math.max(maxSp, Math.hypot(e.vx, e.vy)); }
+  const vs = Math.min(80 / maxSp, 9);
+  if ($('ln-c-dots').checked && T > 0) {
+    const showAll = !L.launched && !hide;
+    for (let k = 1; k * sd < T - 1e-9; k++) {
+      const tk = k * sd; if (!showAll && tk > t) break;
+      const p = tr.at(tk), [px, py] = P(p);
+      if ($('ln-c-dvec').checked && (L.launched || showAll)) {
+        arrow(ctx, px, py, px + p.vx * vs, py, C.x, 2, false);
+        arrow(ctx, px, py, px, py - p.vy * vs, C.y, 2, false);
+      }
+      dot(ctx, px, py, 4, L.launched ? C.trail : C.ghost);
+    }
+  }
+  // top of the path
+  if (!hide && tr.tTop > 0 && (L.launched ? t >= tr.tTop : true)) {
+    const p = tr.at(tr.tTop), [px, py] = P(p);
+    ctx.save(); ctx.setLineDash([3, 4]); ctx.strokeStyle = C.muted; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(V.X(0), py); ctx.stroke(); ctx.restore();
+    mtext(ctx, [['y', 'i'], ['max', 's'], [` = ${f3(p.y)} m`, 'n']], px, py - 14, { size: 13, align: 'center' });
+  }
+  // landing spot
+  if (T > 0 && !hide && (!L.launched || t >= T)) {
+    const e = tr.at(T), ex = V.X(e.x);
+    cross(ctx, ex, V.oy, C.bad);
+    mtext(ctx, [['Δ', 'n'], ['x', 'i'], [` = ${f3(e.x)} m`, 'n']], Math.min(ex, sc.w - 60), V.oy + 29, { size: 13, align: 'center', bold: true });
+  }
+  drawCannon(ctx, V.X(0), V.Y(L.h), L.a);
+  const [bx, by] = L.launched ? P(cur) : [V.X(0), V.Y(L.h)];
+  if ($('ln-c-vec').checked && L.v > 0) {
+    const ex = bx + cur.vx * vs, ey = by - cur.vy * vs;
+    dashed(ctx, [[ex, by], [ex, ey]], C.muted, 1, [3, 3]);
+    dashed(ctx, [[bx, ey], [ex, ey]], C.muted, 1, [3, 3]);
+    arrow(ctx, bx, by, ex, by, C.x, 3);
+    arrow(ctx, bx, by, bx, ey, C.y, 3);
+    arrow(ctx, bx, by, ex, ey, C.res, 3);
+    if (Math.abs(cur.vx * vs) > 18) mtext(ctx, [['v', 'i'], ['x', 's']], (bx + ex) / 2, by + (cur.vy > 0 ? 13 : -13), { size: 14, color: C.x, align: 'center', bold: true });
+    if (Math.abs(cur.vy * vs) > 18) mtext(ctx, [['v', 'i'], ['y', 's']], bx - 8, (by + ey) / 2, { size: 14, color: C.y, align: 'right', bold: true });
+  }
+  drawBall(ctx, bx, by);
+}
+
+function drawGraph(cv, key, color, label) {
+  const { ctx, w, h } = cv; if (!w) return;
+  ctx.clearRect(0, 0, w, h);
+  const pad = { l: 36, r: 10, t: 20, b: 20 };
+  const tr = L.tr, hide = hiddenNow();
+  const tMax = Math.max(tr.T, L.free ? L.free.T : 0, 0.1);
+  const n = 120, A = sample(tr, tr.T, n), B = L.free && !hide ? sample(L.free, L.free.T, n) : [];
+  const val = p => key === 'x' ? p.x : key === 'y' ? p.y : key === 'vx' ? p.vx : p.vy;
+  let lo = 0, hi = 0;
+  for (const p of hide ? [tr.at(0)] : A.concat(B)) { lo = Math.min(lo, val(p)); hi = Math.max(hi, val(p)); }
+  if (hide) { const b = Math.max(L.v, L.h, 1); if (key === 'y') hi = Math.max(hi, L.h + L.v * L.v / (2 * G)); else { hi = Math.max(hi, b); if (key === 'vy') lo = Math.min(lo, -b * 1.5); } }
+  if (hi - lo < 1e-6) { hi += 1; lo -= key === 'x' || key === 'y' ? 0 : 1; }
+  const st = niceNum((hi - lo) / 4); lo = Math.floor(lo / st + 1e-9) * st; hi = Math.ceil(hi / st - 1e-9) * st;
+  const X = t => pad.l + (t / tMax) * (w - pad.l - pad.r), Y = v => pad.t + (hi - v) / (hi - lo) * (h - pad.t - pad.b);
+  ctx.lineWidth = 1; ctx.strokeStyle = C.line; ctx.beginPath();
+  for (let v = lo; v <= hi + 1e-9; v += st) { ctx.moveTo(pad.l, Math.round(Y(v)) + 0.5); ctx.lineTo(w - pad.r, Math.round(Y(v)) + 0.5); }
+  ctx.stroke();
+  for (let v = lo; v <= hi + 1e-9; v += st) mtext(ctx, tickLabel(v, st), pad.l - 5, Y(v), { size: 11, color: C.muted, align: 'right', halo: false });
+  ctx.strokeStyle = C.muted; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(pad.l, Y(0)); ctx.lineTo(w - pad.r, Y(0)); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, h - pad.b); ctx.stroke();
+  const ts = niceNum(tMax / 3);
+  for (let t = 0; t <= tMax + 1e-9; t += ts) if (X(t) < w - pad.r - 26) mtext(ctx, tickLabel(t, ts), X(t), h - pad.b + 11, { size: 11, color: C.muted, align: 'center', halo: false });
+  mtext(ctx, [['t', 'i'], [' (s)', 'n']], w - pad.r, h - 6, { size: 11, color: C.muted, align: 'right', halo: false });
+  mtext(ctx, label, pad.l + 4, 11, { size: 13, color, bold: true, halo: false });
+  const line = (pts, c, lw, dash) => { const q = pts.map(p => [X(p.t), Y(val(p))]); dash ? dashed(ctx, q, c, lw, dash) : poly(ctx, q, c, lw); };
+  if (B.length) line(B, C.muted, 1.3, [4, 4]);
+  if (!hide && !L.launched) line(A, color, 1.4, [3, 4]);
+  if (L.launched && L.t > 0) line(sample(tr, L.t, Math.max(3, Math.ceil(n * L.t / (tr.T || 1)))), color, 2.4);
+  const p = tr.at(L.t); dot(ctx, X(L.t), Y(val(p)), 4.5, color, C.surface);
+}
+function drawGraphs() {
+  drawGraph(graphs.x, 'x', C.x, [['x', 'i'], [' (m)', 'n']]);
+  drawGraph(graphs.y, 'y', C.y, [['y', 'i'], [' (m)', 'n']]);
+  drawGraph(graphs.vx, 'vx', C.x, [['v', 'i'], ['x', 's'], [' (m/s)', 'n']]);
+  drawGraph(graphs.vy, 'vy', C.y, [['v', 'i'], ['y', 's'], [' (m/s)', 'n']]);
+}
+
+const setT = (id, s) => { $(id).innerHTML = s; };
+const HID = '<span class="unk">?</span>';
+function dirText(vx, vy) {
+  if (Math.hypot(vx, vy) < 1e-6) return 'at rest';
+  const a = Math.atan2(vy, vx) / DEG;
+  if (Math.abs(vy) < 1e-6) return 'horizontal';
+  if (Math.abs(vx) < 1e-6) return vy > 0 ? 'straight up' : 'straight down';
+  return `${fx(Math.abs(a), 1)}° ${vy > 0 ? 'above' : 'below'} horizontal`;
+}
+function refreshLaunch() {
+  const tr = L.tr, T = tr.T, hide = hiddenNow(), e = tr.at(T);
+  // column boxes
+  setT('c-xi', '0 m'); setT('c-yi', `${f3(L.h)} m`); setT('c-yf', '0 m');
+  setT('c-vix', `${f3(tr.vx0)} m/s`); setT('c-viy', `${f3(tr.vy0)} m/s`);
+  setT('c-xf', hide || !T ? HID : `${f3(e.x)} m`);
+  setT('c-vfx', L.air ? (hide ? HID : `${f3(e.vx)} m/s`) : `${f3(tr.vx0)} m/s`);
+  setT('c-vfy', hide || !T ? HID : `${f3(e.vy)} m/s`);
+  setT('c-ax', L.air ? 'changes' : '0 m/s<sup>2</sup>'); setT('c-ay', L.air ? 'changes' : '−9.8 m/s<sup>2</sup>');
+  const eqOn = $('ln-eqbtn').getAttribute('aria-pressed') === 'true';
+  $('ln-eqbtn').hidden = L.air; $('ln-air-note').hidden = !L.air;
+  $('ln-eqs').hidden = L.air || !eqOn; $('ln-cols').hidden = !L.air && eqOn;
+  // right now
+  const p = tr.at(L.t);
+  setT('r-t', `${fx(L.t, 2)} s`); setT('r-x', `${f3(p.x)} m`); setT('r-y', `${f3(p.y)} m`);
+  setT('r-dots', $('ln-c-dots').checked && T > 0 ? `dots every ${strobeDt(T)} s` : '');
+  setT('r-vx', `${f3(p.vx)} m/s`); setT('r-vy', `${f3(p.vy)} m/s`);
+  setT('r-sp', `${f3(Math.hypot(p.vx, p.vy))} m/s`); setT('r-dir', dirText(p.vx, p.vy));
+  document.querySelectorAll('.airrow').forEach(n => n.hidden = !L.air);
+  setT('r-acc', `${f3(p.ax)}, ${f3(p.ay)} m/s<sup>2</sup>`);
+  // whole flight
+  const fr = L.free, fe = fr ? fr.at(fr.T) : null;
+  const both = (a, b, u) => hide || !T ? HID : `${a} ${u}` + (fr ? ` <small>(no air: ${b} ${u})</small>` : '');
+  setT('w-t', hide || !T ? HID : `${f3(T)} s`);
+  setT('w-dx', hide || !T ? HID : `${f3(e.x)} m`);
+  setT('w-ymax', hide || !T ? HID : `${f3(tr.ymax)} m`);
+  setT('w-vf', hide || !T ? HID : `${f3(Math.hypot(e.vx, e.vy))} m/s`);
+  setT('w-ang', hide || !T ? HID : `${fx(Math.abs(Math.atan2(e.vy, e.vx) / DEG), 1)}° below horizontal`);
+  setT('w-noair', hide || !T || !fe ? HID : `Δ<i class="v">x</i> = ${f3(fe.x)} m, <i class="v">t</i> = ${f3(fr.T)} s`);
+  setT('w-best', hide || L.best == null ? HID : `${fx(L.best, 1)}° <small>(no air: ${L.h > 0 ? 'less than 45°' : '45°'})</small>`);
+  // time slider + buttons
+  const ts = $('ln-t'); ts.max = Math.max(T, 0.001); ts.value = L.t; ts.disabled = !T;
+  setT('ln-t-o', `<i class="v">t</i> = ${fx(L.t, 2)} s`);
+  $('ln-go').disabled = !T; $('ln-pause').disabled = !L.launched || L.t >= T;
+  $('ln-pause').textContent = L.launched && !L.running && L.t < T ? 'Resume' : 'Pause';
+  const st = $('ln-status'); st.className = 'msg';
+  if (!T) st.textContent = 'From the ground, aim above horizontal or raise the launch height.';
+  else if (L.done && L.t >= T) { st.className = 'msg ok'; st.innerHTML = `Landed ${f3(e.x)} m away after ${f3(T)} s.`; }
+  else if (L.running) st.textContent = 'In flight. Drag the time slider to stop at any moment.';
+  else if (L.launched) st.textContent = 'Paused. Drag the time slider or press Resume.';
+  else if (hide) st.textContent = 'Predict first: how long is it in the air, and where does it land? Then press Launch.';
+  else st.textContent = 'Press Launch, or change a setting to see the new path.';
+  dirty = true;
+}
+function addGhost() {
+  const tr = L.tr, pts = sample(tr, tr.T, 80).map(p => [p.x, p.y]);
+  const label = `${fx(L.a, 0)}°, ${f3(L.v)} m/s${L.air ? ', air' : ''}`;
+  if (L.ghosts.length && L.ghosts[L.ghosts.length - 1].label === label && L.ghosts[L.ghosts.length - 1].h === L.h) return;
+  L.ghosts.push({ pts, label, h: L.h }); if (L.ghosts.length > 6) L.ghosts.shift();
+}
+function landLaunch() { L.t = L.tr.T; L.running = false; if (!L.done) { L.done = true; addGhost(); } refreshLaunch(); }
+
+// paired slider + number inputs
+function pair(rangeId, numId, key, lo, hi) {
+  const r = $(rangeId), n = $(numId);
+  r.addEventListener('input', () => { L[key] = +r.value; n.value = r.value; recompute(); });
+  n.addEventListener('input', () => { const v = parseFloat(n.value); if (!isFinite(v)) return; L[key] = clamp(v, lo, hi); r.value = L[key]; recompute(); });
+  n.addEventListener('change', () => { n.value = L[key]; });
+}
+pair('ln-v', 'ln-v-n', 'v', 0, 40); pair('ln-a', 'ln-a-n', 'a', -45, 90); pair('ln-h', 'ln-h-n', 'h', 0, 60);
+function setLaunch(v, a, h) {
+  Object.assign(L, { v, a, h });
+  $('ln-v').value = $('ln-v-n').value = v; $('ln-a').value = $('ln-a-n').value = a; $('ln-h').value = $('ln-h-n').value = h;
+  recompute();
+}
+const PRESETS = { hor: [12, 0, 20], lvl: [20, 45, 0], cliff: [18, 30, 30] };
+$('ln-preset').onchange = e => { const p = PRESETS[e.target.value]; if (p) setLaunch(...p); e.target.value = ''; };
+$('ln-go').onclick = () => { if (!L.tr.T) return; if (L.t >= L.tr.T || L.done) { L.t = 0; } L.launched = true; L.running = true; refreshLaunch(); };
+$('ln-pause').onclick = () => { if (!L.launched || L.t >= L.tr.T) return; L.running = !L.running; refreshLaunch(); };
+$('ln-reset').onclick = () => { L.t = 0; L.running = false; L.launched = false; refreshLaunch(); };
+$('ln-clear').onclick = () => { L.ghosts = []; dirty = true; };
+$('ln-speed').onchange = e => { L.speed = +e.target.value; };
+$('ln-t').addEventListener('input', e => {
+  L.t = +e.target.value; L.launched = true; L.running = false;
+  if (L.t >= L.tr.T - 1e-6) landLaunch(); else refreshLaunch();
+});
+['ln-c-vec', 'ln-c-dots', 'ln-c-dvec', 'ln-c-hide'].forEach(id => $(id).addEventListener('change', refreshLaunch));
+$('ln-air').addEventListener('change', e => { L.air = e.target.checked; recompute(); });
+$('ln-air-box').addEventListener('toggle', () => { dirty = true; });
+$('ln-ball').addEventListener('change', e => { if (e.target.value !== 'custom') { L.vt = +e.target.value; $('ln-vt').value = L.vt; } setT('ln-vt-o', `${L.vt} m/s`); if (L.air) recompute(); });
+$('ln-vt').addEventListener('input', e => { L.vt = +e.target.value; $('ln-ball').value = 'custom'; setT('ln-vt-o', `${L.vt} m/s`); if (L.air) recompute(); });
+setT('ln-vt-o', `${L.vt} m/s`);
+
+/* =====================================================================
+   CHALLENGES
+   ===================================================================== */
+const cs = makeCanvas($('ch-scene'));
+const CH = { type: 'cup', s: null, tries: 0, hits: 0, run: null, t: 0, running: false, ghosts: [], speed: 1 };
+const fixedPair = (s, v, a) => ({ v: s.fixed.v ?? v, a: s.fixed.a ?? a });
+
+// steps a launch from (x0, y0) until check() ends it
+function fly(x0, y0, v, aDeg, check, dt = 0.001, tMax = 12) {
+  const vx = v * Math.cos(aDeg * DEG), vy = v * Math.sin(aDeg * DEG);
+  const pos = t => [x0 + vx * t, y0 + vy * t - 0.5 * G * t * t];
+  const pts = [[0, x0, y0]];
+  let [px, py] = [x0, y0];
+  for (let t = dt; t <= tMax; t += dt) {
+    const [x, y] = pos(t);
+    const r = check(x, y, px, py, t, dt);
+    if (r) { pts.push([r.t ?? t, r.x ?? x, r.y ?? y]); if (r.extra) pts.push(...r.extra); return { ...r, pts, T: pts[pts.length - 1][0] }; }
+    pts.push([t, x, y]); px = x; py = y;
+  }
+  return { hit: false, msg: 'The ball left the scene.', pts, T: tMax };
+}
+const lerpX = (px, x, py, y, yc) => px + (x - px) * (py - yc) / (py - y);
+const cm = m => `${fx(Math.abs(m) * 100, 1)} cm`;
+
+const TYPES = {
+  cup: {
+    gen() {
+      const h = rnd(0.80, 1.10, 2), xc = rnd(0.60, 1.40, 2);
+      return { h, xc, cupH: 0.10, half: 0.04, x0: 0, y0: h, fixed: { a: 0 }, unknown: 'v', speed: 0.25,
+        desc: 'A marble rolls off the edge of a lab table. Set its launch speed so it drops into the cup on the floor.',
+        givens: [['Table height, <i class="v">y</i><sub>i</sub>', `${fx(h, 2)} m`], ['Cup height (top of the cup)', '0.10 m'],
+          ['Table edge to the center of the cup', `${fx(xc, 2)} m`], ['Cup opening', '8.0 cm wide'], ['Launch angle', '0° (rolls off level)']],
+        box: [-0.4, Math.max(xc + 0.35, 1.2), h + 0.3], scanV: [0.3, 6, 0.002] };
+    },
+    sim(s, v, a) {
+      let cross = null;
+      return fly(0, s.h, v, a, (x, y, px, py, t) => {
+        if (py >= s.cupH && y < s.cupH) {
+          const c = lerpX(px, x, py, y, s.cupH); cross = c - s.xc;
+          if (Math.abs(cross) <= s.half) return { hit: true, x: c, y: s.cupH, msg: 'In the cup!', extra: [[t + 0.05, s.xc, s.cupH - 0.06]] };
+        }
+        if (y < s.cupH && Math.abs(x - s.xc) <= s.half + 0.008) return { hit: false, msg: `Bounced off the cup. At rim height it was ${cm(cross)} ${cross < 0 ? 'short of' : 'past'} the center.` };
+        if (y <= 0) { const c = cross ?? x - s.xc; return { hit: false, y: 0, msg: `Missed. At rim height it was ${cm(c)} ${c < 0 ? 'short of' : 'past'} the center of the cup.` }; }
+      }, 0.0004, 3);
+    },
+    solve(s) { const t = Math.sqrt(2 * (s.h - s.cupH) / G); return `Fall time to the rim: <i class="v">y</i><sub>f</sub> = ½<i class="v">a</i><sub>y</sub><i class="v">t</i><sup>2</sup> + <i class="v">y</i><sub>i</sub> with <i class="v">y</i><sub>f</sub> = 0.10 m gives <i class="v">t</i> = ${fx(t, 3)} s. Then <i class="v">v</i><sub>ix</sub> = Δ<i class="v">x</i> ÷ <i class="v">t</i> = ${fx(s.xc, 2)} ÷ ${fx(t, 3)} = <b>${fx(s.xc / t, 2)} m/s</b>.`; }
+  },
+  cliff: {
+    gen() {
+      const h = rnd(10, 40, 0);
+      let v, a, xt;
+      do { v = rnd(12, 25, 1); a = rnd(-15, 55, 0); xt = +trajectory(v, a, h, false).at(trajectory(v, a, h, false).T).x.toFixed(1); } while (xt < 8);
+      const unknown = Math.random() < 0.5 ? 'a' : 'v';
+      const fixed = unknown === 'a' ? { v } : { a };
+      return { h, xt, half: 1.0, x0: 0, y0: h, fixed, unknown, speed: 1,
+        desc: `Launch a ball from the top of a cliff so it lands on the target. ${unknown === 'a' ? 'The speed is set. Find a launch angle that works.' : 'The angle is set. Find the launch speed.'}`,
+        givens: [['Cliff height, <i class="v">y</i><sub>i</sub>', `${fx(h, 1)} m`], ['Cliff edge to the target center', `${fx(xt, 1)} m`], ['Target width', '2.0 m'],
+          unknown === 'a' ? ['Launch speed, <i class="v">v</i><sub>i</sub>', `${fx(v, 1)} m/s`] : ['Launch angle, <i class="v">θ</i>', `${fx(a, 0)}°`]],
+        box: [-Math.max(xt, h) * 0.15, xt + Math.max(6, xt * 0.2), Math.max(h * 1.35, h + 12)], scanV: [1, 60, 0.01], scanA: [-45, 85, 0.05] };
+    },
+    sim(s, v, a) {
+      return fly(0, s.h, v, a, (x, y, px, py) => {
+        if (y <= 0) {
+          const c = lerpX(px, x, py, y, 0), off = c - s.xt;
+          if (Math.abs(off) <= s.half) return { hit: true, x: c, y: 0, msg: `On target! It landed ${fx(Math.abs(off), 1)} m from the center.` };
+          return { hit: false, x: c, y: 0, msg: `Missed. It landed ${fx(Math.abs(off), 1)} m ${off < 0 ? 'short of' : 'past'} the target center.` };
+        }
+      }, 0.002, 20);
+    }
+  },
+  ledge: {
+    gen() {
+      for (let k = 0; k < 500; k++) {
+        const H = rnd(3, 8, 1), d = rnd(10, 20, 1), X = d + 3, a = rnd(40, 70, 0), th = a * DEG;
+        if (X * Math.tan(th) <= H) continue;
+        let v = Math.sqrt(G * X * X / (2 * Math.cos(th) ** 2 * (X * Math.tan(th) - H)));
+        if (v > 30) continue;
+        const xv = v * v * Math.sin(2 * th) / (2 * G);
+        const yd = d * Math.tan(th) - G * d * d / (2 * v * v * Math.cos(th) ** 2);
+        if (xv > X - 0.5 || yd < H + 0.4) continue;
+        v = +v.toFixed(1);
+        const unknown = Math.random() < 0.5 ? 'a' : 'v';
+        const s = { H, d, p0: d + 1.5, p1: d + 4.5, len: 9, x0: 0, y0: 0, unknown, fixed: unknown === 'a' ? { v } : { a }, speed: 1 };
+        if (!TYPES.ledge.sim(s, v, a).hit) continue;
+        s.desc = `Launch a ball from the ground so it lands on the green pad on top of the ledge. ${unknown === 'a' ? 'The speed is set. Find a launch angle that works.' : 'The angle is set. Find the launch speed.'}`;
+        s.givens = [['Ledge height', `${fx(H, 1)} m`], ['Launch point to the ledge edge', `${fx(d, 1)} m`],
+          ['Landing pad', `${fx(s.p0, 1)} m to ${fx(s.p1, 1)} m from launch`],
+          unknown === 'a' ? ['Launch speed, <i class="v">v</i><sub>i</sub>', `${fx(v, 1)} m/s`] : ['Launch angle, <i class="v">θ</i>', `${fx(a, 0)}°`]];
+        s.box = [-2, d + s.len, Math.max(H * 2.4, 14)]; s.scanV = [1, 40, 0.01]; s.scanA = [1, 89, 0.05];
+        return s;
+      }
+    },
+    sim(s, v, a) {
+      return fly(0, 0, v, a, (x, y, px, py) => {
+        if (x >= s.d && px < s.d) {
+          const yd = py + (y - py) * (s.d - px) / (x - px);
+          if (yd < s.H) return { hit: false, x: s.d, y: Math.max(yd, 0), msg: `Hit the side of the ledge, ${fx(s.H - Math.max(yd, 0), 1)} m below the top.` };
+        }
+        if (x >= s.d && x <= s.d + s.len && py > s.H && y <= s.H) {
+          const c = lerpX(px, x, py, y, s.H);
+          if (c >= s.p0 && c <= s.p1) return { hit: true, x: c, y: s.H, msg: 'Landed on the pad!' };
+          return { hit: false, x: c, y: s.H, msg: `Landed on the ledge, ${fx(c < s.p0 ? s.p0 - c : c - s.p1, 1)} m ${c < s.p0 ? 'short of' : 'past'} the pad.` };
+        }
+        if (y <= 0) {
+          const c = lerpX(px, x, py, y, 0);
+          return { hit: false, x: c, y: 0, msg: c > s.d ? 'Sailed past the end of the ledge.' : `Fell short. It hit the ground ${fx(s.d - c, 1)} m before the ledge.` };
+        }
+      }, 0.001, 12);
+    }
+  },
+  monkey: {
+    gen() {
+      const D = rnd(15, 30, 0), H = rnd(8, 15, 1);
+      return { D, H, y0: 1.0, x0: 0, fixed: {}, unknown: 'both', speed: 1,
+        desc: 'A zookeeper launches a banana toward a monkey hanging from a branch. The monkey lets go the instant the banana is launched. Get the banana to the monkey before the monkey reaches the ground.',
+        givens: [['Launch height', '1.0 m'], ['Horizontal distance to the monkey', `${fx(D, 1)} m`], ['Monkey’s starting height', `${fx(H, 1)} m`], ['Catch range', 'within 0.6 m']],
+        box: [-2, D + 4, H + 4] };
+    },
+    my(s, t) { return Math.max(0, s.H - 0.5 * G * t * t); },
+    sim(s, v, a) {
+      let best = { d: 1e9, dy: 0 };
+      const r = fly(0, s.y0, v, a, (x, y, px, py, t) => {
+        const m = TYPES.monkey.my(s, t), d = Math.hypot(x - s.D, y - m);
+        if (d < best.d) best = { d, dy: y - m, m };
+        if (d <= 0.6 && m > 0) return { hit: true, msg: `Caught! The monkey grabbed the banana ${fx(m, 1)} m above the ground.` };
+        if (y <= 0 || x > s.D + 3) {
+          if (best.m <= 0) return { hit: false, msg: 'The monkey reached the ground before the banana got there.' };
+          return { hit: false, msg: `Missed. The banana passed ${fx(Math.abs(best.dy), 1)} m ${best.dy > 0 ? 'above' : 'below'} the monkey.` };
+        }
+      }, 0.001, 10);
+      r.tEnd = r.hit ? r.T : Math.max(r.T, Math.sqrt(2 * s.H / G));
+      return r;
+    },
+    solve(s) {
+      const th = Math.atan((s.H - s.y0) / s.D), vmin = s.D / (Math.cos(th) * Math.sqrt(2 * s.H / G));
+      return `Aim straight at the monkey: <i class="v">θ</i> = tan<sup>−1</sup>(${fx(s.H - s.y0, 1)} ÷ ${fx(s.D, 1)}) = <b>${fx(th / DEG, 1)}°</b>. Both the banana and the monkey fall the same amount in the same time, so it works at any speed fast enough to arrive before the monkey lands, about <b>${fx(vmin, 1)} m/s</b> or more.`;
+    }
+  }
+};
+// search the unknown for every value that works
+function scanSolve(s) {
+  const T = TYPES[CH.type]; if (T.solve) return T.solve(s);
+  const runs = [], key = s.unknown, [a0, a1, st] = key === 'v' ? s.scanV : s.scanA;
+  let cur = null;
+  for (let q = a0; q <= a1 + 1e-9; q += st) {
+    const ok = T.sim(s, key === 'v' ? q : s.fixed.v, key === 'v' ? s.fixed.a : q).hit;
+    if (ok && !cur) cur = [q, q]; else if (ok) cur[1] = q; else if (cur) { runs.push(cur); cur = null; }
+  }
+  if (cur) runs.push(cur);
+  if (!runs.length) return 'No value in range works for this setup. Press New setup.';
+  const u = key === 'v' ? ' m/s' : '°', d = key === 'v' ? 1 : 1;
+  const parts = runs.map(([lo, hi]) => `<b>${fx((lo + hi) / 2, d)}${u}</b> <small>(${fx(lo, d)} to ${fx(hi, d)}${u} all work)</small>`);
+  return `${key === 'v' ? 'Launch speed' : 'Launch angle'}: ${parts.join(' or ')}.`;
+}
+
+function newSetup() {
+  CH.s = TYPES[CH.type].gen(); CH.ghosts = []; CH.run = null; CH.t = 0; CH.running = false;
+  const s = CH.s;
+  $('ch-desc').textContent = s.desc;
+  $('ch-givens').innerHTML = s.givens.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  const vI = $('ch-v'), aI = $('ch-a');
+  vI.disabled = s.fixed.v != null; aI.disabled = s.fixed.a != null;
+  vI.value = s.fixed.v ?? (CH.type === 'cup' ? '1.50' : CH.type === 'monkey' ? '15.0' : '15.0');
+  aI.value = s.fixed.a ?? (CH.type === 'monkey' ? '20.0' : '30.0');
+  vI.step = CH.type === 'cup' ? '0.01' : '0.1';
+  $('ch-aim').hidden = CH.type !== 'monkey';
+  $('ch-reveal').disabled = true; $('ch-sol').hidden = true;
+  CH.speed = s.speed; $('ch-speed').value = String(s.speed);
+  refreshChal('Work out your launch on paper, then type it in and press Launch.');
+}
+function readInputs() {
+  const s = CH.s, v = parseFloat($('ch-v').value), a = parseFloat($('ch-a').value);
+  return fixedPair(s, clamp(isFinite(v) ? v : 0, 0, 60), clamp(isFinite(a) ? a : 0, -45, 89));
+}
+function refreshChal(msg, cls = '') {
+  const st = $('ch-status'); st.className = 'msg ' + cls; st.textContent = msg;
+  $('ch-score').textContent = CH.tries ? `Hits ${CH.hits} of ${CH.tries}` : '';
+  $('ch-go').disabled = CH.running; $('ch-v').readOnly = $('ch-a').readOnly = CH.running;
+  dirty = true;
+}
+$('ch-type').onchange = e => { CH.type = e.target.value; newSetup(); };
+$('ch-new').onclick = newSetup;
+$('ch-again').onclick = () => { if (CH.run) CH.ghosts.push(CH.run.pts); CH.run = null; CH.t = 0; CH.running = false; refreshChal('Adjust your launch and try again.'); };
+$('ch-speed').onchange = e => { CH.speed = +e.target.value; };
+$('ch-aim').onclick = () => { const s = CH.s; $('ch-a').value = fx(Math.atan((s.H - s.y0) / s.D) / DEG, 1); dirty = true; };
+['ch-v', 'ch-a'].forEach(id => $(id).addEventListener('input', () => { dirty = true; }));
+$('ch-go').onclick = () => {
+  if (CH.running) return;
+  if (CH.run) CH.ghosts.push(CH.run.pts);
+  const { v, a } = readInputs();
+  CH.run = TYPES[CH.type].sim(CH.s, v, a); CH.run.v = v; CH.run.a = a;
+  CH.t = 0; CH.running = true; refreshChal('In flight…');
+};
+$('ch-reveal').onclick = () => { const el = $('ch-sol'); el.innerHTML = scanSolve(CH.s); el.hidden = false; };
+function finishChal() {
+  const r = CH.run; CH.running = false; CH.tries++; if (r.hit) CH.hits++;
+  $('ch-reveal').disabled = false;
+  refreshChal(r.msg, r.hit ? 'ok' : 'miss');
+}
+function runPos(r, t) {
+  const p = r.pts; if (t >= p[p.length - 1][0]) return p[p.length - 1];
+  let lo = 0, hi = p.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (p[m][0] <= t) lo = m; else hi = m; }
+  return p[lo];
+}
+
+function drawChal() {
+  const { ctx } = cs; if (!cs.w || !CH.s) return;
+  const s = CH.s, [x0, x1, y1] = s.box, V = fitView(cs, x0, x1, y1);
+  drawBackdrop(ctx, cs, V, { indoor: CH.type === 'cup' });
+  const P = (x, y) => [V.X(x), V.Y(y)];
+  const lbl = (t, x, y, o = {}) => mtext(ctx, t, x, y, { size: 13, ...o });
+  const inp = readInputs(), cur = CH.run ? runPos(CH.run, CH.t) : null;
+  if (CH.type === 'cup') {
+    const [tx, ty] = P(0, s.h);
+    ctx.fillStyle = C.wood; ctx.fillRect(V.X(-0.6), ty, tx - V.X(-0.6), Math.max(4, 0.04 * V.s));
+    ctx.fillRect(V.X(-0.06), ty, Math.max(3, 0.04 * V.s), V.oy - ty); ctx.fillRect(V.X(-0.55), ty, Math.max(3, 0.04 * V.s), V.oy - ty);
+    const cx = V.X(s.xc), cw0 = 0.03 * V.s, cw1 = s.half * V.s, ch = s.cupH * V.s;
+    ctx.fillStyle = C.cup; ctx.beginPath(); ctx.moveTo(cx - cw0, V.oy); ctx.lineTo(cx + cw0, V.oy); ctx.lineTo(cx + cw1, V.oy - ch); ctx.lineTo(cx - cw1, V.oy - ch); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = C.halo; ctx.lineWidth = 1.5; ctx.stroke();
+    lbl(`${fx(s.h, 2)} m`, V.X(-0.06) - 8, (ty + V.oy) / 2, { align: 'right' });
+    dashed(ctx, [[tx, V.oy - 30], [cx, V.oy - 30]], C.muted, 1.2, [4, 3]);
+    lbl(`${fx(s.xc, 2)} m`, (tx + cx) / 2, V.oy - 40, { align: 'center' });
+  } else if (CH.type === 'cliff') {
+    const [tx, ty] = P(0, s.h);
+    ctx.fillStyle = C.cliff; ctx.fillRect(0, ty, tx, V.oy - ty);
+    ctx.strokeStyle = C.cliffEdge; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(tx, ty); ctx.lineTo(tx, V.oy); ctx.stroke();
+    lbl(`${fx(s.h, 1)} m`, tx - 8, (ty + V.oy) / 2, { align: 'right' });
+    const a = V.X(s.xt - s.half), b = V.X(s.xt + s.half), bw = (b - a) / 5;
+    for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 === 0 ? C.cup : C.surface; ctx.fillRect(a + i * bw, V.oy - 5, bw, 7); }
+    lbl(`${fx(s.xt, 1)} m`, V.X(s.xt), V.oy - 18, { align: 'center' });
+  } else if (CH.type === 'ledge') {
+    const lx = V.X(s.d), ly = V.Y(s.H);
+    ctx.fillStyle = C.cliff; ctx.fillRect(lx, ly, cs.w - lx, V.oy - ly);
+    ctx.strokeStyle = C.cliffEdge; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(lx, V.oy); ctx.lineTo(lx, ly); ctx.lineTo(cs.w, ly); ctx.stroke();
+    ctx.fillStyle = C.pad; ctx.fillRect(V.X(s.p0), ly - 4, V.X(s.p1) - V.X(s.p0), 6);
+    lbl(`${fx(s.H, 1)} m`, lx + 8, (ly + V.oy) / 2);
+    dashed(ctx, [[V.X(0), V.oy - 14], [lx, V.oy - 14]], C.muted, 1.2, [4, 3]);
+    lbl(`${fx(s.d, 1)} m`, (V.X(0) + lx) / 2, V.oy - 24, { align: 'center' });
+  } else {
+    // tree, branch, monkey
+    const trunkX = V.X(s.D + 1.6), by = V.Y(s.H + 0.9);
+    ctx.fillStyle = C.bark; ctx.fillRect(trunkX - 0.25 * V.s, V.Y(s.H + 3), 0.5 * V.s, V.oy - V.Y(s.H + 3));
+    ctx.strokeStyle = C.bark; ctx.lineWidth = Math.max(4, 0.18 * V.s); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(trunkX, by); ctx.lineTo(V.X(s.D - 0.5), by); ctx.stroke();
+    ctx.fillStyle = C.leaf; ctx.beginPath(); ctx.ellipse(trunkX, V.Y(s.H + 3), 2.2 * V.s, 1.4 * V.s, 0, 0, Math.PI * 2); ctx.fill();
+    const t = CH.run ? Math.min(CH.t, CH.run.tEnd) : 0, caught = CH.run && CH.run.hit && CH.t >= CH.run.T;
+    const my = TYPES.monkey.my(s, CH.run ? (caught ? CH.run.T : t) : 0);
+    const mx = V.X(s.D), myp = V.Y(Math.max(my, 0.35));
+    const r = Math.max(6, 0.35 * V.s);
+    if (!CH.run || CH.t === 0) { ctx.strokeStyle = C.fur; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(mx, myp - r); ctx.lineTo(mx, by); ctx.stroke(); }
+    dot(ctx, mx, myp, r, C.fur, C.halo); dot(ctx, mx, myp - r * 1.25, r * 0.7, C.fur, C.halo);
+    lbl(`${fx(s.H, 1)} m`, mx + r + 8, V.Y(s.H));
+    // line of sight along the current aim
+    const ex = V.X(s.D), eyA = V.Y(s.y0 + s.D * Math.tan(inp.a * DEG));
+    dashed(ctx, [[V.X(0), V.Y(s.y0)], [ex, eyA]], C.muted, 1.2, [5, 5]);
+    ctx.fillStyle = C.muted; ctx.fillRect(V.X(0) - 3, V.Y(s.y0), 6, V.oy - V.Y(s.y0));
+  }
+  for (const g of CH.ghosts) poly(ctx, g.map(p => P(p[1], p[2])), C.ghost, 2);
+  if (CH.run && CH.t > 0) {
+    const pts = []; for (const p of CH.run.pts) { if (p[0] > CH.t) break; pts.push(P(p[1], p[2])); }
+    poly(ctx, pts, C.trail, 2.4);
+  }
+  const a = CH.run ? CH.run.a : inp.a;
+  if (CH.type !== 'cup') drawCannon(ctx, V.X(s.x0), V.Y(s.y0), a);
+  const [bx, by2] = cur ? P(cur[1], cur[2]) : P(s.x0, s.y0);
+  drawBall(ctx, bx, by2, CH.type === 'monkey' ? C.banana : C.y);
+}
+
+/* ---------- tabs and loop ---------- */
+let tab = 'launch';
+function showTab(name) {
+  tab = name;
+  for (const [t, id] of [['launch', 'tab-launch'], ['chal', 'tab-chal']]) {
+    $(id).setAttribute('aria-selected', String(t === name)); $(t).hidden = t !== name;
+  }
+  $('ln-prompts').hidden = name !== 'launch'; $('ch-prompts').hidden = name !== 'chal';
+  try { localStorage.setItem('projectile-lab-tab', name); } catch (e) {}
+  dirty = true;
+}
+$('tab-launch').onclick = () => showTab('launch');
+const drawer = $('drawer');
+function setDrawer(open) { drawer.hidden = !open; $('try-open').setAttribute('aria-expanded', String(open)); if (open) $('try-close').focus(); }
+$('try-open').onclick = () => setDrawer(drawer.hidden);
+$('try-close').onclick = () => { setDrawer(false); $('try-open').focus(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !drawer.hidden) { setDrawer(false); $('try-open').focus(); } });
+$('ln-eqbtn').onclick = e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); e.currentTarget.textContent = on ? 'Show values' : 'Show equations'; refreshLaunch(); };
+$('tab-chal').onclick = () => showTab('chal');
+
+let last = performance.now(), lastUi = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (L.running) {
+    L.t += dt * L.speed;
+    if (L.t >= L.tr.T) landLaunch();
+    else if (now - lastUi > 60) { lastUi = now; refreshLaunch(); } else dirty = true;
+  }
+  if (CH.running) {
+    CH.t += dt * CH.speed; dirty = true;
+    if (CH.t >= (CH.run.tEnd ?? CH.run.T)) { CH.t = CH.run.tEnd ?? CH.run.T; finishChal(); }
+  }
+  if (dirty) { dirty = false; if (tab === 'launch') { drawLaunch(); drawGraphs(); } else drawChal(); }
+  requestAnimationFrame(frame);
+}
+recompute();
+newSetup();
+try { const t = localStorage.getItem('projectile-lab-tab'); if (t === 'chal') showTab('chal'); } catch (e) {}
+requestAnimationFrame(frame);
+})();
+</script>

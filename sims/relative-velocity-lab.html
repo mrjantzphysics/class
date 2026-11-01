@@ -1,0 +1,993 @@
+<title>Relative Velocity Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caladea:ital,wght@0,400;0,700;1,400;1,700&display=swap">
+<style>
+/* Layout: lab workbench. A live scene on the left, an instrument panel (sliders, vector diagram, component table) on the right; stacks below 940px. */
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #1b2433;
+  --muted: #566275;
+  --line: #d3d9e2;
+  --soft: #f5f7fa;
+  --accent: #a84e0c;
+  --tab-on: #14213d;
+  --tab-on-ink: #f6f4ee;
+  --boat: #b04a0a;
+  --boat-ink: #ffffff;
+  --flow: #2257b8;
+  --result: #14213d;
+  --water: #cfe2f5;
+  --streak: rgba(255, 255, 255, 0.85);
+  --bank: #d8cbb0;
+  --bank-edge: #a8956c;
+  --map: #e9eef4;
+  --grid: #cdd6e2;
+  --cloud: rgba(255, 255, 255, 0.92);
+  --city: #3d4a5c;
+  --trail: rgba(20, 33, 61, 0.55);
+  --halo: rgba(255, 255, 255, 0.9);
+  --good: #2f7d4a;
+  --bad: #b3261e;
+  --note: #fbebdd;
+  --serif: Cambria, Caladea, Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1520; --surface: #162030; --ink: #e6ebf2; --muted: #9eabbf; --line: #2a3850; --soft: #1b2738;
+    --accent: #f0a052; --tab-on: #f0a052; --tab-on-ink: #14213d;
+    --boat: #f08a3c; --boat-ink: #1b1206; --flow: #79aefc; --result: #f2f4f8;
+    --water: #173451; --streak: rgba(170, 205, 240, 0.4); --bank: #3b3428; --bank-edge: #6a5c42;
+    --map: #121d2c; --grid: #23324a; --cloud: rgba(200, 215, 235, 0.16); --city: #c9d3e3;
+    --trail: rgba(230, 236, 245, 0.55); --halo: rgba(14, 21, 32, 0.88);
+    --good: #62c785; --bad: #ff8077; --note: #2b2116;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1520; --surface: #162030; --ink: #e6ebf2; --muted: #9eabbf; --line: #2a3850; --soft: #1b2738;
+  --accent: #f0a052; --tab-on: #f0a052; --tab-on-ink: #14213d;
+  --boat: #f08a3c; --boat-ink: #1b1206; --flow: #79aefc; --result: #f2f4f8;
+  --water: #173451; --streak: rgba(170, 205, 240, 0.4); --bank: #3b3428; --bank-edge: #6a5c42;
+  --map: #121d2c; --grid: #23324a; --cloud: rgba(200, 215, 235, 0.16); --city: #c9d3e3;
+  --trail: rgba(230, 236, 245, 0.55); --halo: rgba(14, 21, 32, 0.88);
+  --good: #62c785; --bad: #ff8077; --note: #2b2116;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--serif); font-size: 16px; line-height: 1.45;
+  padding-inline: 16px; padding-block: 22px 48px;
+}
+.wrap { max-width: 1260px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 14px; }
+.eyebrow { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 2px; font-weight: 700; }
+h1 { font-size: clamp(28px, 3.4vw, 38px); line-height: 1.1; margin: 0; text-wrap: balance; }
+.lede { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab {
+  font: inherit; font-size: 16px; padding: 8px 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.tab[aria-selected="true"] { background: var(--tab-on); color: var(--tab-on-ink); border-color: var(--tab-on); font-weight: 700; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.sim { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 18px; align-items: start; }
+@media (max-width: 940px) { .sim { grid-template-columns: minmax(0, 1fr); } }
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+.stage canvas { display: block; width: 100%; aspect-ratio: 16 / 10; min-height: 300px; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--line); }
+.group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.group > span { font-size: 14px; color: var(--muted); }
+.btn {
+  font: inherit; font-size: 15px; padding: 6px 13px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--soft); color: var(--ink);
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--boat); border-color: var(--boat); color: var(--boat-ink); font-weight: 700; }
+.btn[aria-pressed="true"] { background: var(--tab-on); color: var(--tab-on-ink); border-color: var(--tab-on); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+select { font: inherit; font-size: 15px; padding: 5px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--soft); color: var(--ink); }
+.status { padding: 10px 14px; border-top: 1px solid var(--line); min-height: 44px; font-size: 16px; }
+.status.ok { color: var(--good); font-weight: 700; }
+.status.miss { color: var(--bad); font-weight: 700; }
+
+.panel { display: grid; gap: 14px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 12px; min-width: 0; }
+.card h2 { font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.ctl { display: grid; gap: 2px; }
+.ctl label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 15px; }
+.ctl output { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.ctl input[type="range"] { width: 100%; margin: 4px 0 0; }
+.ctl.boat input { accent-color: var(--boat); }
+.ctl.flow input { accent-color: var(--flow); }
+.ctl.plain input { accent-color: var(--muted); }
+.ctl input:disabled { opacity: 0.4; }
+.ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.sw { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; position: relative; top: -2px; }
+.sw.boat { background: var(--boat); } .sw.flow { background: var(--flow); } .sw.result { background: var(--result); height: 4px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets .btn { font-size: 14px; padding: 5px 10px; }
+.checks { display: grid; gap: 4px; }
+.checks label { display: flex; gap: 8px; align-items: center; font-size: 15px; cursor: pointer; }
+.checks input { accent-color: var(--tab-on); width: 16px; height: 16px; }
+.vec canvas { display: block; width: 100%; aspect-ratio: 4 / 3; touch-action: none; border-radius: 6px; background: var(--soft); }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.challenge { background: var(--note); border-radius: 8px; padding: 10px 12px; font-size: 15px; }
+.challenge[hidden] { display: none; }
+
+i.v { font-style: italic; }
+sub { font-size: 0.7em; font-style: normal; }
+.eqline { font-size: 17px; text-align: center; }
+.comp { overflow-x: auto; }
+.comp table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 15px; }
+.comp th, .comp td { padding: 4px 4px; text-align: right; white-space: nowrap; }
+.comp th { font-weight: 400; color: var(--muted); font-size: 13px; }
+.comp td:first-child, .comp th:first-child { text-align: left; color: var(--muted); }
+.comp td.op { color: var(--muted); text-align: center; padding: 4px 1px; }
+.comp td.res { font-weight: 700; }
+.comp tr + tr td { border-top: 1px solid var(--line); }
+dl.read { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; margin: 0; font-size: 15px; }
+dl.read dt { color: var(--muted); }
+dl.read dd { margin: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.prompts { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
+.prompt { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.prompt h3 { margin: 0 0 6px; font-size: 18px; text-wrap: balance; }
+.prompt p { margin: 0; color: var(--ink); }
+.prompt .q { margin-top: 8px; color: var(--muted); font-size: 15px; }
+.legend { font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 16px; }
+footer { font-size: 13px; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">Honors Physics · Unit 2 · Sections 2.5 and 2.6</p>
+      <h1>Relative Velocity Lab</h1>
+      <p class="lede">Change the vectors and watch the motion change. Every velocity here is an object measured relative to a frame, and the frames chain together.</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Simulation">
+      <button class="tab" role="tab" id="tab-river" aria-controls="river" aria-selected="true">River crossing</button>
+      <button class="tab" role="tab" id="tab-plane" aria-controls="plane" aria-selected="false">Plane in the wind</button>
+    </div>
+  </header>
+
+  <!-- ======================= RIVER ======================= -->
+  <section id="river" class="sim" role="tabpanel" aria-labelledby="tab-river">
+    <div class="stage">
+      <canvas id="rv-scene" aria-label="Top view of a boat crossing a river"></canvas>
+      <div class="bar">
+        <div class="group">
+          <button class="btn primary" id="rv-go">Launch boat</button>
+          <button class="btn" id="rv-pause">Pause</button>
+          <button class="btn" id="rv-reset">Reset</button>
+        </div>
+        <div class="group">
+          <span>Speed</span>
+          <select id="rv-speed" aria-label="Simulation speed">
+            <option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option>
+          </select>
+        </div>
+        <div class="group" role="group" aria-label="Watch from">
+          <span>Watch from</span>
+          <button class="btn" id="rv-f-ground" aria-pressed="true">the shore</button>
+          <button class="btn" id="rv-f-water" aria-pressed="false">a raft on the water</button>
+        </div>
+      </div>
+      <div class="status" id="rv-status" aria-live="polite"></div>
+    </div>
+
+    <div class="panel">
+      <div class="card">
+        <h2>Vectors</h2>
+        <div class="challenge" id="rv-chal" hidden></div>
+        <div class="ctl boat">
+          <label for="rv-vb"><span><span class="sw boat"></span>Boat speed, <i class="v">v</i><sub>boat, water</sub></span><output id="rv-vb-o"></output></label>
+          <input type="range" id="rv-vb" min="0.5" max="6" step="0.1" value="4">
+        </div>
+        <div class="ctl boat">
+          <label for="rv-th"><span><span class="sw boat"></span>Heading</span><output id="rv-th-o"></output></label>
+          <input type="range" id="rv-th" min="-85" max="85" step="0.5" value="0">
+          <div class="ends"><span>← aim upstream</span><span>straight across</span><span>aim downstream →</span></div>
+        </div>
+        <div class="ctl flow">
+          <label for="rv-vc"><span><span class="sw flow"></span>Current, <i class="v">v</i><sub>water, ground</sub></span><output id="rv-vc-o"></output></label>
+          <input type="range" id="rv-vc" min="0" max="5" step="0.1" value="3">
+        </div>
+        <div class="ctl plain">
+          <label for="rv-W"><span>River width</span><output id="rv-W-o"></output></label>
+          <input type="range" id="rv-W" min="20" max="200" step="10" value="80">
+        </div>
+        <div class="presets">
+          <button class="btn" id="rv-p-across">Aim straight across</button>
+          <button class="btn" id="rv-p-land">Land straight across</button>
+          <button class="btn" id="rv-p-chal">Dock challenge</button>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="rv-c-vec" checked> Show vectors on the boat</label>
+          <label><input type="checkbox" id="rv-c-pred" checked> Show predicted landing spot</label>
+          <label><input type="checkbox" id="rv-c-hide"> Hide answers (predict first)</label>
+        </div>
+      </div>
+
+      <div class="card vec">
+        <h2>Vector diagram</h2>
+        <canvas id="rv-vec" aria-label="Tip-to-tail vector diagram for the boat"></canvas>
+        <p class="hint">Drag the round handles to change the boat's velocity or the current.</p>
+        <p class="eqline"><i class="v">v</i><sub>boat, ground</sub> = <i class="v">v</i><sub>boat, water</sub> + <i class="v">v</i><sub>water, ground</sub></p>
+        <div class="comp">
+          <table>
+            <thead><tr><th></th><th><i class="v">v</i><sub>boat, water</sub></th><th></th><th><i class="v">v</i><sub>water, ground</sub></th><th></th><th><i class="v">v</i><sub>boat, ground</sub></th></tr></thead>
+            <tbody>
+              <tr><td>Across</td><td id="rv-e1"></td><td class="op">+</td><td id="rv-e2"></td><td class="op">=</td><td class="res" id="rv-e3"></td></tr>
+              <tr><td>Downstream</td><td id="rv-e4"></td><td class="op">+</td><td id="rv-e5"></td><td class="op">=</td><td class="res" id="rv-e6"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint">Components in m/s. Downstream is positive; aiming upstream gives a negative downstream component.</p>
+      </div>
+
+      <div class="card">
+        <h2>Results for these settings</h2>
+        <dl class="read">
+          <dt>Speed relative to the ground</dt><dd id="rv-r1"></dd>
+          <dt>Direction relative to the ground</dt><dd id="rv-r2"></dd>
+          <dt>Time to cross</dt><dd id="rv-r3"></dd>
+          <dt>Landing spot</dt><dd id="rv-r4"></dd>
+          <dt>Path length</dt><dd id="rv-r5"></dd>
+        </dl>
+        <p class="hint">Measured from the start dock, assuming the settings stay the same for the whole trip.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= PLANE ======================= -->
+  <section id="plane" class="sim" role="tabpanel" aria-labelledby="tab-plane" hidden>
+    <div class="stage">
+      <canvas id="pl-scene" aria-label="Map view of a plane flying through wind"></canvas>
+      <div class="bar">
+        <div class="group">
+          <button class="btn primary" id="pl-go">Take off</button>
+          <button class="btn" id="pl-pause">Pause</button>
+          <button class="btn" id="pl-reset">Reset</button>
+        </div>
+        <div class="group">
+          <span>Speed</span>
+          <select id="pl-speed" aria-label="Simulation speed">
+            <option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option>
+          </select>
+        </div>
+        <div class="group" role="group" aria-label="Watch from">
+          <span>Watch from</span>
+          <button class="btn" id="pl-f-ground" aria-pressed="true">the ground</button>
+          <button class="btn" id="pl-f-air" aria-pressed="false">a balloon in the wind</button>
+        </div>
+      </div>
+      <div class="status" id="pl-status" aria-live="polite"></div>
+    </div>
+
+    <div class="panel">
+      <div class="card">
+        <h2>Vectors</h2>
+        <div class="challenge" id="pl-chal" hidden></div>
+        <div class="ctl boat">
+          <label for="pl-va"><span><span class="sw boat"></span>Airspeed, <i class="v">v</i><sub>plane, air</sub></span><output id="pl-va-o"></output></label>
+          <input type="range" id="pl-va" min="100" max="400" step="5" value="200">
+        </div>
+        <div class="ctl boat">
+          <label for="pl-hd"><span><span class="sw boat"></span>Heading (where the nose points)</span><output id="pl-hd-o"></output></label>
+          <input type="range" id="pl-hd" min="0" max="359" step="1" value="0">
+          <div class="ends"><span>N</span><span>E</span><span>S</span><span>W</span><span>N</span></div>
+        </div>
+        <div class="ctl flow">
+          <label for="pl-w"><span><span class="sw flow"></span>Wind speed, <i class="v">v</i><sub>air, ground</sub></span><output id="pl-w-o"></output></label>
+          <input type="range" id="pl-w" min="0" max="150" step="5" value="60">
+        </div>
+        <div class="ctl flow">
+          <label for="pl-wd"><span><span class="sw flow"></span>Wind blows toward</span><output id="pl-wd-o"></output></label>
+          <input type="range" id="pl-wd" min="0" max="359" step="1" value="90">
+          <div class="ends"><span>N</span><span>E</span><span>S</span><span>W</span><span>N</span></div>
+        </div>
+        <div class="ctl plain">
+          <label for="pl-rt"><span>Airport direction (400 km away)</span><output id="pl-rt-o"></output></label>
+          <input type="range" id="pl-rt" min="0" max="355" step="5" value="0">
+        </div>
+        <div class="presets">
+          <button class="btn" id="pl-p-point">Point the nose at the airport</button>
+          <button class="btn" id="pl-p-fix">Correct for the wind</button>
+          <button class="btn" id="pl-p-head">Headwind</button>
+          <button class="btn" id="pl-p-tail">Tailwind</button>
+          <button class="btn" id="pl-p-chal">Landing challenge</button>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="pl-c-vec" checked> Show vectors on the plane</label>
+          <label><input type="checkbox" id="pl-c-pred" checked> Show predicted path</label>
+          <label><input type="checkbox" id="pl-c-hide"> Hide answers (predict first)</label>
+        </div>
+      </div>
+
+      <div class="card vec">
+        <h2>Vector diagram</h2>
+        <canvas id="pl-vec" aria-label="Tip-to-tail vector diagram for the plane"></canvas>
+        <p class="hint">North is up. Drag the round handles to change the plane's velocity or the wind.</p>
+        <p class="eqline"><i class="v">v</i><sub>plane, ground</sub> = <i class="v">v</i><sub>plane, air</sub> + <i class="v">v</i><sub>air, ground</sub></p>
+        <div class="comp">
+          <table>
+            <thead><tr><th></th><th><i class="v">v</i><sub>plane, air</sub></th><th></th><th><i class="v">v</i><sub>air, ground</sub></th><th></th><th><i class="v">v</i><sub>plane, ground</sub></th></tr></thead>
+            <tbody>
+              <tr><td>East</td><td id="pl-e1"></td><td class="op">+</td><td id="pl-e2"></td><td class="op">=</td><td class="res" id="pl-e3"></td></tr>
+              <tr><td>North</td><td id="pl-e4"></td><td class="op">+</td><td id="pl-e5"></td><td class="op">=</td><td class="res" id="pl-e6"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint">Components in km/h. East and north are positive.</p>
+      </div>
+
+      <div class="card">
+        <h2>Results for these settings</h2>
+        <dl class="read">
+          <dt>Ground speed</dt><dd id="pl-r1"></dd>
+          <dt>Direction of travel</dt><dd id="pl-r2"></dd>
+          <dt>Angle between nose and path</dt><dd id="pl-r3"></dd>
+          <dt>Time to reach the airport</dt><dd id="pl-r4"></dd>
+          <dt>Where it arrives</dt><dd id="pl-r5"></dd>
+        </dl>
+        <p class="hint">From the start city, assuming the settings stay the same for the whole flight.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="prompts" id="rv-prompts" aria-label="Try this: river">
+    <div class="prompt"><h3>Does the current slow the crossing?</h3><p>Click <b>Aim straight across</b>, launch, then drag the current from 1 m/s to 5 m/s while the boat is moving.</p><p class="q">What happens to the time to cross? Which component of the velocity sets that time?</p></div>
+    <div class="prompt"><h3>Land straight across</h3><p>Turn the boat upstream until the landing spot is right across from the start dock. Then check your angle with <b>Land straight across</b>.</p><p class="q">Show that sin θ = <i class="v">v</i><sub>water, ground</sub> ÷ <i class="v">v</i><sub>boat, water</sub>. Why does it take longer than aiming straight across?</p></div>
+    <div class="prompt"><h3>Current faster than the boat</h3><p>Set the current to 4.0 m/s and the boat to 2.0 m/s.</p><p class="q">Can the boat land straight across now? Try different headings and find the one that drifts the least.</p></div>
+    <div class="prompt"><h3>Ride the raft</h3><p>Launch, then switch the view to <b>a raft on the water</b>.</p><p class="q">What path does the boat follow in this view? Which of the three velocities is that path showing?</p></div>
+  </section>
+
+  <section class="prompts" id="pl-prompts" aria-label="Try this: plane" hidden>
+    <div class="prompt"><h3>Point the nose at the airport</h3><p>Use a crosswind, click <b>Point the nose at the airport</b>, and take off.</p><p class="q">Where does the plane end up? Compare where the nose points with the direction the plane actually moves.</p></div>
+    <div class="prompt"><h3>Correct for the wind</h3><p>Find a heading that reaches the airport before you press <b>Correct for the wind</b>.</p><p class="q">Which way does the nose point compared with the path? Use the vector diagram to explain why.</p></div>
+    <div class="prompt"><h3>Headwind and tailwind</h3><p>Try a 100 km/h headwind, then a 100 km/h tailwind, at the same airspeed.</p><p class="q">Which flight is shorter? For a round trip, does the wind help, hurt, or cancel out?</p></div>
+    <div class="prompt"><h3>Ride the balloon</h3><p>Take off in a crosswind, then switch to <b>a balloon in the wind</b>.</p><p class="q">Relative to the clouds, which way does the plane move? Why does the airport drift away from where it started?</p></div>
+  </section>
+
+  <footer>
+    <div class="legend">
+      <span><span class="sw boat"></span>Object relative to the moving air or water</span>
+      <span><span class="sw flow"></span>Water or air relative to the ground</span>
+      <span><span class="sw result"></span>Object relative to the ground (the vector sum)</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const DEG = Math.PI / 180;
+const FONT = 'Cambria, Caladea, Georgia, serif';
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const mod = (a, n) => ((a % n) + n) % n;
+const $ = id => document.getElementById(id);
+
+/* ---------- theme colors for canvas ---------- */
+const C = {};
+const TOK = { ink: '--ink', muted: '--muted', line: '--line', soft: '--soft', surface: '--surface', boat: '--boat', flow: '--flow',
+  result: '--result', water: '--water', streak: '--streak', bank: '--bank', bankEdge: '--bank-edge', map: '--map', grid: '--grid',
+  cloud: '--cloud', city: '--city', trail: '--trail', halo: '--halo', good: '--good', bad: '--bad', accent: '--accent' };
+function readColors() { const cs = getComputedStyle(document.documentElement); for (const k in TOK) C[k] = cs.getPropertyValue(TOK[k]).trim(); }
+readColors();
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors); } catch (e) {}
+new MutationObserver(readColors).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* ---------- canvas helpers ---------- */
+function makeCanvas(el) {
+  const o = { el, ctx: el.getContext('2d'), w: 0, h: 0 };
+  const fit = () => {
+    const r = el.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    if (!r.width) return;
+    o.w = r.width; o.h = r.height;
+    el.width = Math.round(r.width * d); el.height = Math.round(r.height * d);
+    o.ctx.setTransform(d, 0, 0, d, 0, 0);
+  };
+  new ResizeObserver(fit).observe(el); fit();
+  return o;
+}
+function arrow(ctx, x1, y1, x2, y2, color, lw = 3, halo = true) {
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy);
+  if (L < 2) return;
+  const hl = Math.min(lw * 3.2 + 5, L * 0.5), hw = hl * 0.55, ux = dx / L, uy = dy / L;
+  const bx = x2 - ux * hl, by = y2 - uy * hl;
+  const shaft = () => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(bx + ux, by + uy); };
+  const head = () => { ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(bx - uy * hw, by + ux * hw); ctx.lineTo(bx + uy * hw, by - ux * hw); ctx.closePath(); };
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (halo) { ctx.strokeStyle = C.halo; ctx.lineWidth = lw + 4; shaft(); ctx.stroke(); head(); ctx.lineWidth = 4; ctx.stroke(); }
+  ctx.strokeStyle = color; ctx.lineWidth = lw; shaft(); ctx.stroke();
+  ctx.fillStyle = color; head(); ctx.fill();
+}
+function text(ctx, s, x, y, o = {}) {
+  const { size = 14, color = C.ink, align = 'left', base = 'alphabetic', bold = false, halo = true } = o;
+  ctx.font = `${bold ? '700 ' : ''}${size}px ${FONT}`; ctx.textAlign = align; ctx.textBaseline = base;
+  if (halo) { ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = C.halo; ctx.strokeText(s, x, y); }
+  ctx.fillStyle = color; ctx.fillText(s, x, y);
+}
+// draws v with a subscript, like v_{boat, water}
+function vtext(ctx, sub, x, y, color, size = 15, align = 'left') {
+  const f1 = `italic 700 ${size}px ${FONT}`, f2 = `700 ${Math.round(size * 0.72)}px ${FONT}`;
+  ctx.font = f1; const a = ctx.measureText('v').width; ctx.font = f2; const b = ctx.measureText(sub).width;
+  const tw = a + b + 1; const sx = align === 'center' ? x - tw / 2 : align === 'right' ? x - tw : x;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  const piece = (f, s, px, py) => { ctx.font = f; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeStyle = C.halo; ctx.strokeText(s, px, py); ctx.fillStyle = color; ctx.fillText(s, px, py); };
+  piece(f1, 'v', sx, y); piece(f2, sub, sx + a + 1, y + size * 0.3);
+}
+function labelVec(ctx, A, B, sub, color, side) {
+  const dx = B[0] - A[0], dy = B[1] - A[1], L = Math.hypot(dx, dy);
+  if (L < 16) return;
+  const nx = -dy / L * side, ny = dx / L * side, off = 15;
+  const x = (A[0] + B[0]) / 2 + nx * off, y = (A[1] + B[1]) / 2 + ny * off;
+  vtext(ctx, sub, x, y, color, 15, nx < -0.35 ? 'right' : nx > 0.35 ? 'left' : 'center');
+}
+function dashed(ctx, x1, y1, x2, y2, color, lw = 2, dash = [7, 6]) {
+  ctx.save(); ctx.setLineDash(dash); ctx.strokeStyle = color; ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
+}
+function cross(ctx, x, y, color) {
+  ctx.save(); ctx.strokeStyle = C.halo; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  const d = 7; const p = () => { ctx.beginPath(); ctx.moveTo(x - d, y - d); ctx.lineTo(x + d, y + d); ctx.moveTo(x + d, y - d); ctx.lineTo(x - d, y + d); };
+  p(); ctx.stroke(); ctx.strokeStyle = color; ctx.lineWidth = 2.5; p(); ctx.stroke(); ctx.restore();
+}
+function handle(ctx, x, y, color, active) {
+  ctx.beginPath(); ctx.arc(x, y, active ? 9 : 7, 0, Math.PI * 2);
+  ctx.fillStyle = C.surface; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = color; ctx.stroke();
+}
+function niceStep(pxPerUnit, minPx) {
+  for (const s of [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000]) if (s * pxPerUnit >= minPx) return s;
+  return 5000;
+}
+// tip-to-tail diagram transform that fits O, P, Q
+function fitT(pts, w, h, minSpan) {
+  let x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+  for (const [x, y] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  const pad = 44, sx = Math.max(x1 - x0, minSpan), sy = Math.max(y1 - y0, minSpan);
+  const s = Math.min((w - 2 * pad) / sx, (h - 2 * pad) / sy);
+  return { s, ox: w / 2 - ((x0 + x1) / 2) * s, oy: h / 2 + ((y0 + y1) / 2) * s };
+}
+function setTxt(id, s) { const el = $(id); if (el._v !== s) { el._v = s; el.innerHTML = s; } }
+function setSlider(id, v) { const el = $(id); if (document.activeElement !== el || el._drag) el.value = v; }
+
+/* ---------- direction words ---------- */
+const bearingOf = (e, n) => mod(Math.atan2(e, n) / DEG, 360);
+function named(b, dp = 1) {
+  b = mod(b, 360);
+  const r = x => x.toFixed(dp);
+  for (const [a, w] of [[0, 'due north'], [90, 'due east'], [180, 'due south'], [270, 'due west'], [360, 'due north']])
+    if (Math.abs(b - a) < 0.5 * Math.pow(10, -dp)) return w;
+  const q = Math.floor(b / 90), a = b - 90 * q;
+  const pairs = [['E of N', 'N of E'], ['S of E', 'E of S'], ['W of S', 'S of W'], ['N of W', 'W of N']];
+  return a <= 45 ? `${r(a)}° ${pairs[q][0]}` : `${r(90 - a)}° ${pairs[q][1]}`;
+}
+const word8 = b => ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'][Math.round(mod(b, 360) / 45) % 8];
+const sgn = (x, d) => { const s = x.toFixed(d); return (Math.abs(x) < 0.5 * Math.pow(10, -d) ? (0).toFixed(d) : s).replace('-', '−'); };
+function hm(h) { let H = Math.floor(h), M = Math.round((h - H) * 60); if (M === 60) { H++; M = 0; } return `${H} h ${String(M).padStart(2, '0')} min`; }
+
+/* ---------- drag on a vector diagram ---------- */
+function attachDrag(cv, sim, onMove) {
+  const el = cv.el;
+  const pos = e => { const r = el.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  const pick = (x, y) => { let best = null, bd = 26; for (const h of sim.handles || []) { const d = Math.hypot(h.x - x, h.y - y); if (d < bd) { bd = d; best = h.id; } } return best; };
+  el.addEventListener('pointerdown', e => {
+    if (sim.locked()) return;
+    const [x, y] = pos(e); const id = pick(x, y); if (!id) return;
+    sim.drag = id; el.setPointerCapture(e.pointerId); el.style.cursor = 'grabbing'; e.preventDefault();
+  });
+  el.addEventListener('pointermove', e => {
+    const [x, y] = pos(e);
+    if (sim.drag) { const T = sim.vt; onMove(sim.drag, (x - T.ox) / T.s, (T.oy - y) / T.s); return; }
+    el.style.cursor = !sim.locked() && pick(x, y) ? 'grab' : 'default';
+  });
+  const end = () => { sim.drag = null; el.style.cursor = 'default'; };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+}
+
+/* =====================================================================
+   RIVER CROSSING   x = downstream (m), y = across from the near bank (m)
+   ===================================================================== */
+const rv = {
+  p: { vb: 4, th: 0, vc: 3, W: 80 },
+  frame: 'ground', speed: 1, showVec: true, showPred: true, hide: false,
+  s: null, cam: null, phase: 0, chal: null, drag: null, vt: null, handles: [],
+  parts: Array.from({ length: 110 }, () => ({ u: Math.random(), v: Math.random() })),
+};
+rv.locked = () => !!(rv.chal && rv.s.launched && !rv.s.done);
+function rvVel() {
+  const { vb, th, vc } = rv.p;
+  const bx = vb * Math.sin(th * DEG), by = vb * Math.cos(th * DEG);
+  return { bx, by, cx: vc, cy: 0, gx: bx + vc, gy: by };
+}
+function rvReset() {
+  rv.s = { t: 0, x: 0, y: 0, shift: 0, launched: false, paused: false, done: false, trail: [], msg: '', cls: '' };
+  rv.cam = null;
+}
+function rvLaunch() {
+  if (rv.s.launched) rvReset();
+  rv.s.launched = true; rv.s.trail = [{ x: 0, y: 0, sh: 0 }];
+}
+function rvDrift(x) {
+  if (Math.abs(x) < 0.05) return 'directly across from the start dock';
+  return `${Math.abs(x).toFixed(1)} m ${x > 0 ? 'downstream' : 'upstream'} of the start dock`;
+}
+function rvStep(dt) {
+  const s = rv.s; if (s.paused) return;
+  const v = rvVel(), W = rv.p.W;
+  rv.phase += v.cx * dt;
+  if (!s.launched || s.done) return;
+  let h = dt, landed = false;
+  if (v.gy > 0 && s.y + v.gy * h >= W) { h = (W - s.y) / v.gy; landed = true; }
+  s.x += v.gx * h; s.y = Math.max(0, s.y + v.gy * h); s.t += h; s.shift += v.cx * h;
+  if (landed) s.y = W;
+  const last = s.trail[s.trail.length - 1];
+  if (landed || Math.hypot(s.x - last.x, s.y - last.y) > W * 0.004) s.trail.push({ x: s.x, y: s.y, sh: s.shift });
+  if (s.y <= 0 && v.gy <= 0) { s.msg = 'The boat is stuck against the near bank. It needs a velocity component across the river.'; s.cls = ''; }
+  else if (!landed) { s.msg = ''; }
+  if (landed) {
+    s.done = true;
+    if (rv.chal) {
+      const off = Math.abs(s.x - rv.chal.dock), tol = Math.max(2, rv.p.W * 0.03);
+      s.cls = off <= tol ? 'ok' : 'miss';
+      s.msg = off <= tol ? `Docked! You landed ${off.toFixed(1)} m from the dock after ${s.t.toFixed(1)} s.`
+        : `Missed the dock by ${off.toFixed(1)} m. Reset and adjust your heading or speed.`;
+    } else { s.cls = ''; s.msg = `Landed ${rvDrift(s.x)} after ${s.t.toFixed(1)} s.`; }
+  } else if (s.t > 900 || Math.abs(s.x) > 60 * W) { s.done = true; s.cls = 'miss'; s.msg = 'The boat drifted out of range. Reset and try a different heading.'; }
+}
+function drawBoat(ctx, x, y, ang, col) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  ctx.beginPath(); ctx.moveTo(16, 0); ctx.quadraticCurveTo(7, -8, -11, -6.5); ctx.lineTo(-11, 6.5); ctx.quadraticCurveTo(7, 8, 16, 0); ctx.closePath();
+  ctx.fillStyle = col; ctx.fill(); ctx.lineWidth = 1.6; ctx.strokeStyle = C.ink; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-1, -5.5); ctx.lineTo(-1, 5.5); ctx.stroke();
+  ctx.restore();
+}
+function drawRiver(cv) {
+  const { ctx, w, h } = cv; if (!w) return;
+  const p = rv.p, s = rv.s, W = p.W, v = rvVel();
+  const top = Math.round(h * 0.17), bot = Math.round(h * 0.83), k = (bot - top) / W, vw = w / k;
+  const off = rv.frame === 'ground' ? 0 : s.shift;     // display x = ground x − off
+  const boatX = s.x - off;
+  if (rv.cam == null || !s.launched) rv.cam = boatX + vw * 0.2;
+  else { const m = vw * 0.3; if (boatX > rv.cam + m) rv.cam = boatX - m; if (boatX < rv.cam - m) rv.cam = boatX + m; }
+  const SX = d => w / 2 + (d - rv.cam) * k, SY = y => bot - y * k;
+  const viewL = rv.cam - vw / 2;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = C.bank; ctx.fillRect(0, 0, w, top); ctx.fillRect(0, bot, w, h - bot);
+  ctx.fillStyle = C.water; ctx.fillRect(0, top, w, bot - top);
+  ctx.strokeStyle = C.bankEdge; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, top); ctx.lineTo(w, top); ctx.moveTo(0, bot); ctx.lineTo(w, bot); ctx.stroke();
+
+  // water streaks: flow in the shore view, at rest in the raft view
+  const T = vw * 1.25, shiftX = rv.frame === 'ground' ? rv.phase : 0;
+  const len = 4 + clamp(p.vc * 7, 0, 30);
+  ctx.strokeStyle = C.streak; ctx.fillStyle = C.streak; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  for (const q of rv.parts) {
+    const wx = viewL + mod(q.u * T + shiftX - viewL, T), y = top + 6 + q.v * (bot - top - 12), x = SX(wx);
+    if (rv.frame === 'ground' && p.vc > 0.05) { ctx.beginPath(); ctx.moveTo(x - len, y); ctx.lineTo(x, y); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.arc(x, y, 1.8, 0, Math.PI * 2); ctx.fill(); }
+  }
+
+  // distance markers along both banks (fixed to the ground)
+  const step = niceStep(k, 70);
+  const g0 = Math.floor((viewL + off) / step) - 1, g1 = Math.ceil((viewL + vw + off) / step) + 1;
+  ctx.strokeStyle = C.bankEdge; ctx.lineWidth = 1.5;
+  for (let n = g0; n <= g1; n++) {
+    const x = SX(n * step - off);
+    ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, top - 9); ctx.moveTo(x, bot); ctx.lineTo(x, bot + 7); ctx.stroke();
+    text(ctx, `${n * step === 0 ? 0 : (n * step).toString().replace('-', '−')} m`, x, top - 13, { size: 13, color: C.ink, align: 'center', halo: false });
+  }
+  text(ctx, 'Far bank: distance downstream of the start dock', 12, 18, { size: 13, color: C.muted, halo: false });
+
+  // docks
+  const dock = (gx, y0, dir, col) => {
+    const x = SX(gx - off); ctx.fillStyle = col; ctx.strokeStyle = C.ink; ctx.lineWidth = 1;
+    ctx.fillRect(x - 6, dir > 0 ? y0 - 16 : y0, 12, 16); ctx.strokeRect(x - 6, dir > 0 ? y0 - 16 : y0, 12, 16);
+  };
+  dock(0, bot, 1, C.bankEdge);
+  text(ctx, 'start dock', SX(0 - off), bot + 24, { size: 13, color: C.ink, align: 'center', halo: false });
+  if (rv.chal) {
+    dock(rv.chal.dock, top, -1, C.accent);
+    const x = SX(rv.chal.dock - off);
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, top - 2); ctx.lineTo(x, top - 34); ctx.stroke();
+    ctx.fillStyle = C.accent; ctx.beginPath(); ctx.moveTo(x, top - 34); ctx.lineTo(x + 16, top - 29); ctx.lineTo(x, top - 24); ctx.closePath(); ctx.fill();
+  }
+
+  // predicted path (shore view only)
+  if (rv.showPred && !rv.hide && !s.done && rv.frame === 'ground' && v.gy > 1e-6) {
+    const lx = s.x + v.gx * (W - s.y) / v.gy;
+    dashed(ctx, SX(s.x), SY(s.y), SX(lx), SY(W), C.result, 1.6);
+    cross(ctx, SX(lx), SY(W), C.result);
+  }
+
+  // trail
+  if (s.trail.length > 1) {
+    ctx.strokeStyle = C.trail; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.beginPath();
+    s.trail.forEach((q, i) => { const dx = rv.frame === 'ground' ? q.x : q.x - q.sh; const X = SX(dx), Y = SY(q.y); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+    ctx.lineTo(SX(boatX), SY(s.y)); ctx.stroke();
+  }
+
+  // boat and its vectors
+  const bx = SX(boatX), by = SY(s.y);
+  if (rv.showVec) {
+    const av = clamp((bot - top) * 0.075, 8, 30);
+    const P = [bx + v.bx * av, by - v.by * av];
+    if (rv.frame === 'ground') {
+      const Q = [P[0] + v.cx * av, P[1]];
+      arrow(ctx, bx, by, P[0], P[1], C.boat, 3);
+      arrow(ctx, P[0], P[1], Q[0], Q[1], C.flow, 3);
+      arrow(ctx, bx, by, Q[0], Q[1], C.result, 3.5);
+    } else arrow(ctx, bx, by, P[0], P[1], C.boat, 3);
+  }
+  drawBoat(ctx, bx, by, Math.atan2(-Math.cos(p.th * DEG), Math.sin(p.th * DEG)), C.boat);
+
+  // HUD
+  text(ctx, `t = ${s.t.toFixed(1)} s`, w - 12, h - 14, { size: 16, bold: true, align: 'right', halo: false });
+  text(ctx, rv.frame === 'ground' ? 'Watching from the shore' : 'Watching from a raft drifting with the water', 12, h - 14, { size: 14, color: C.ink, halo: false });
+  if (rv.frame === 'water' && s.launched) text(ctx, 'In this view the boat only shows its velocity relative to the water.', 12, top + 20, { size: 13, color: C.ink });
+}
+function drawRiverVec(cv) {
+  const { ctx, w, h } = cv; if (!w) return;
+  const v = rvVel();
+  const pts = [[0, 0], [v.bx, v.by], [v.gx, v.gy]];
+  if (!rv.drag || !rv.vt) rv.vt = fitT(pts, w, h, 3);
+  const T = rv.vt, S = ([a, b]) => [T.ox + a * T.s, T.oy - b * T.s];
+  ctx.clearRect(0, 0, w, h);
+  const O = S([0, 0]), P = S([v.bx, v.by]), Q = S([v.gx, v.gy]);
+  // reference line: straight across
+  dashed(ctx, O[0], O[1], O[0], 8, C.grid, 1.5, [4, 5]);
+  text(ctx, 'straight across', O[0] + 5, 18, { size: 12, color: C.muted });
+  text(ctx, 'downstream →', w - 10, h - 10, { size: 12, color: C.muted, align: 'right' });
+  // heading angle arc
+  if (Math.abs(rv.p.th) >= 1) {
+    const r = Math.min(46, Math.hypot(P[0] - O[0], P[1] - O[1]) * 0.6);
+    const a0 = -Math.PI / 2, a1 = Math.atan2(P[1] - O[1], P[0] - O[0]);
+    ctx.beginPath(); ctx.arc(O[0], O[1], r, Math.min(a0, a1), Math.max(a0, a1)); ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5; ctx.stroke();
+    const am = (a0 + a1) / 2; text(ctx, 'θ', O[0] + Math.cos(am) * (r + 11), O[1] + Math.sin(am) * (r + 11) + 5, { size: 15, color: C.ink, align: 'center' });
+  }
+  arrow(ctx, O[0], O[1], P[0], P[1], C.boat, 3.5);
+  arrow(ctx, P[0], P[1], Q[0], Q[1], C.flow, 3.5);
+  arrow(ctx, O[0], O[1], Q[0], Q[1], C.result, 4);
+  labelVec(ctx, O, P, 'boat, water', C.boat, rv.p.th < 0 ? 1 : -1);
+  labelVec(ctx, P, Q, 'water, ground', C.flow, -1);
+  labelVec(ctx, O, Q, 'boat, ground', C.result, v.gx >= v.bx ? 1 : -1);
+  const lk = rv.locked();
+  if (!lk) { handle(ctx, P[0], P[1], C.boat, rv.drag === 'P'); handle(ctx, Q[0], Q[1], C.flow, rv.drag === 'Q'); }
+  rv.handles = lk ? [] : [{ id: 'P', x: P[0], y: P[1] }, { id: 'Q', x: Q[0], y: Q[1] }];
+}
+function rvUI() {
+  const p = rv.p, v = rvVel(), s = rv.s, H = rv.hide;
+  setSlider('rv-vb', p.vb); setSlider('rv-th', p.th); setSlider('rv-vc', p.vc); setSlider('rv-W', p.W);
+  setTxt('rv-vb-o', `${p.vb.toFixed(1)} m/s`);
+  setTxt('rv-th-o', Math.abs(p.th) < 0.05 ? '0° (straight across)' : `${Math.abs(p.th).toFixed(1)}° ${p.th < 0 ? 'upstream' : 'downstream'}`);
+  setTxt('rv-vc-o', `${p.vc.toFixed(1)} m/s`);
+  setTxt('rv-W-o', `${p.W} m`);
+  setTxt('rv-e1', H ? '?' : sgn(v.by, 2)); setTxt('rv-e2', '0'); setTxt('rv-e3', H ? '?' : sgn(v.gy, 2));
+  setTxt('rv-e4', H ? '?' : sgn(v.bx, 2)); setTxt('rv-e5', sgn(v.cx, 2)); setTxt('rv-e6', H ? '?' : sgn(v.gx, 2));
+  const sp = Math.hypot(v.gx, v.gy), phi = Math.atan2(v.gx, v.gy) / DEG;
+  const q = x => H ? '?' : x;
+  setTxt('rv-r1', q(`${sp.toFixed(2)} m/s`));
+  setTxt('rv-r2', q(v.gy <= 1e-9 ? 'never across' : Math.abs(phi) < 0.05 ? 'straight across' : `${Math.abs(phi).toFixed(1)}° ${phi > 0 ? 'downstream' : 'upstream'} of straight across`));
+  if (v.gy > 1e-9) {
+    const t = p.W / v.gy, d = v.gx * t;
+    setTxt('rv-r3', q(`${t.toFixed(1)} s`));
+    setTxt('rv-r4', q(Math.abs(d) < 0.05 ? 'directly across' : `${Math.abs(d).toFixed(1)} m ${d > 0 ? 'downstream' : 'upstream'}`));
+    setTxt('rv-r5', q(`${(sp * t).toFixed(1)} m`));
+  } else { setTxt('rv-r3', q('never')); setTxt('rv-r4', q('never lands')); setTxt('rv-r5', q('—')); }
+  const st = $('rv-status'); setTxt('rv-status', s.msg || (s.launched ? '' : 'Set the vectors, then launch the boat. You can change them while it moves.'));
+  st.className = 'status ' + (s.cls || '');
+  setTxt('rv-go', s.done ? 'Run again' : s.launched ? 'Restart' : 'Launch boat');
+  setTxt('rv-pause', s.paused ? 'Resume' : 'Pause');
+  const lk = rv.locked();
+  for (const id of ['rv-vb', 'rv-th', 'rv-p-across', 'rv-p-land']) $(id).disabled = lk;
+  for (const id of ['rv-vc', 'rv-W']) $(id).disabled = !!rv.chal;
+}
+function rvChallenge() {
+  const W = [40, 60, 80, 100, 120][Math.floor(Math.random() * 5)];
+  const vc = Math.round((1 + Math.random() * 2.5) * 10) / 10;
+  const dock = Math.round((-0.5 + Math.random() * 1.6) * W);
+  rv.chal = { dock }; rv.p.W = W; rv.p.vc = vc; rv.p.th = 0; rv.p.vb = 3;
+  rvReset();
+  const where = dock === 0 ? 'directly across from the start dock' : `${Math.abs(dock)} m ${dock > 0 ? 'downstream' : 'upstream'} of the start dock`;
+  $('rv-chal').hidden = false;
+  $('rv-chal').innerHTML = `<b>Dock challenge.</b> The river is ${W} m wide and the current is ${vc.toFixed(1)} m/s. The dock is ${where}. Choose a boat speed and heading, then launch. Your settings lock once the boat leaves.
+    <div class="presets" style="margin-top:8px"><button class="btn" id="rv-chal-new">New challenge</button><button class="btn" id="rv-chal-end">End challenge</button></div>`;
+  $('rv-chal-new').onclick = rvChallenge;
+  $('rv-chal-end').onclick = () => { rv.chal = null; $('rv-chal').hidden = true; rvReset(); };
+}
+
+/* =====================================================================
+   PLANE IN WIND   x = east (km), y = north (km); bearings clockwise from north
+   ===================================================================== */
+const D = 400;
+const pl = {
+  p: { va: 200, hd: 0, w: 60, wd: 90, rt: 0 },
+  frame: 'ground', speed: 1, showVec: true, showPred: true, hide: false,
+  s: null, cam: null, phase: [0, 0], chal: null, drag: null, vt: null, handles: [],
+  clouds: Array.from({ length: 12 }, () => ({ u: Math.random(), v: Math.random(), r: Math.random() })),
+};
+pl.locked = () => !!(pl.chal && pl.s.launched && !pl.s.done);
+const HOURS_PER_SEC = 0.1;
+function plVel() {
+  const { va, hd, w, wd } = pl.p;
+  const ax = va * Math.sin(hd * DEG), ay = va * Math.cos(hd * DEG), wx = w * Math.sin(wd * DEG), wy = w * Math.cos(wd * DEG);
+  return { ax, ay, wx, wy, gx: ax + wx, gy: ay + wy };
+}
+const plDir = () => [Math.sin(pl.p.rt * DEG), Math.cos(pl.p.rt * DEG)];       // toward the airport
+const plRight = () => [Math.cos(pl.p.rt * DEG), -Math.sin(pl.p.rt * DEG)];    // to the right of the route
+function plReset() { pl.s = { t: 0, x: 0, y: 0, sh: [0, 0], launched: false, paused: false, done: false, trail: [], msg: '', cls: '' }; pl.cam = null; }
+function plLaunch() { if (pl.s.launched) plReset(); pl.s.launched = true; pl.s.trail = [{ x: 0, y: 0, sx: 0, sy: 0 }]; }
+function plMissText(off) {
+  const n = plRight(), b = bearingOf(off * n[0], off * n[1]);
+  return `${Math.abs(off).toFixed(0)} km ${word8(b)} of the airport`;
+}
+function plStep(dtReal) {
+  const s = pl.s; if (s.paused) return;
+  const dt = dtReal * HOURS_PER_SEC, v = plVel();
+  pl.phase[0] += v.wx * dt; pl.phase[1] += v.wy * dt;
+  if (!s.launched || s.done) return;
+  const d = plDir(), a0 = s.x * d[0] + s.y * d[1], va = v.gx * d[0] + v.gy * d[1];
+  let h = dt, arrived = false;
+  if (va > 0 && a0 + va * h >= D) { h = (D - a0) / va; arrived = true; }
+  s.x += v.gx * h; s.y += v.gy * h; s.t += h; s.sh[0] += v.wx * h; s.sh[1] += v.wy * h;
+  const last = s.trail[s.trail.length - 1];
+  if (arrived || Math.hypot(s.x - last.x, s.y - last.y) > 2) s.trail.push({ x: s.x, y: s.y, sx: s.sh[0], sy: s.sh[1] });
+  if (!arrived) s.msg = va <= 0 ? 'With these settings the plane never gets any closer to the airport.' : '';
+  if (arrived) {
+    s.done = true;
+    const n = plRight(), off = s.x * n[0] + s.y * n[1], tol = 10;
+    if (Math.abs(off) <= tol) { s.cls = 'ok'; s.msg = `Arrived over the airport after ${hm(s.t)}${Math.abs(off) >= 0.5 ? `, ${Math.abs(off).toFixed(0)} km off center` : ''}.`; }
+    else { s.cls = 'miss'; s.msg = `Missed. After ${hm(s.t)} the plane passed ${plMissText(off)}.`; }
+  } else if (s.t > 12 || Math.hypot(s.x, s.y) > 4 * D) { s.done = true; s.cls = 'miss'; s.msg = 'The plane flew far off course. Reset and try another heading.'; }
+}
+function drawPlane(ctx, x, y, ang, col) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.beginPath();
+  ctx.moveTo(19, 0); ctx.quadraticCurveTo(17, -3, 11, -3); ctx.lineTo(4, -3); ctx.lineTo(-3, -17); ctx.lineTo(-7.5, -17); ctx.lineTo(-4, -3);
+  ctx.lineTo(-12, -2.6); ctx.lineTo(-16, -8.5); ctx.lineTo(-19, -8.5); ctx.lineTo(-17.5, -1.5); ctx.lineTo(-17.5, 1.5); ctx.lineTo(-19, 8.5);
+  ctx.lineTo(-16, 8.5); ctx.lineTo(-12, 2.6); ctx.lineTo(-4, 3); ctx.lineTo(-7.5, 17); ctx.lineTo(-3, 17); ctx.lineTo(4, 3); ctx.lineTo(11, 3);
+  ctx.quadraticCurveTo(17, 3, 19, 0); ctx.closePath();
+  ctx.fillStyle = col; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = C.ink; ctx.stroke(); ctx.restore();
+}
+function drawSky(cv) {
+  const { ctx, w, h } = cv; if (!w) return;
+  const p = pl.p, s = pl.s, v = plVel(), d = plDir();
+  const k = Math.min(w, h) * 0.62 / D, vw = w / k, vh = h / k;
+  const off = pl.frame === 'ground' ? [0, 0] : s.sh;
+  const px = s.x - off[0], py = s.y - off[1];
+  if (pl.cam == null || !s.launched) pl.cam = [d[0] * D / 2 - off[0], d[1] * D / 2 - off[1]];
+  else {
+    const mx = vw * 0.36, my = vh * 0.34;
+    if (px > pl.cam[0] + mx) pl.cam[0] = px - mx; if (px < pl.cam[0] - mx) pl.cam[0] = px + mx;
+    if (py > pl.cam[1] + my) pl.cam[1] = py - my; if (py < pl.cam[1] - my) pl.cam[1] = py + my;
+  }
+  const SX = x => w / 2 + (x - pl.cam[0]) * k, SY = y => h / 2 - (y - pl.cam[1]) * k;
+  const viewL = pl.cam[0] - vw / 2, viewB = pl.cam[1] - vh / 2;
+
+  ctx.clearRect(0, 0, w, h); ctx.fillStyle = C.map; ctx.fillRect(0, 0, w, h);
+  // ground grid (fixed to the ground)
+  const step = niceStep(k, 60);
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let n = Math.floor((viewL + off[0]) / step) - 1; n <= Math.ceil((viewL + vw + off[0]) / step) + 1; n++) { const x = SX(n * step - off[0]); ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+  for (let n = Math.floor((viewB + off[1]) / step) - 1; n <= Math.ceil((viewB + vh + off[1]) / step) + 1; n++) { const y = SY(n * step - off[1]); ctx.moveTo(0, y); ctx.lineTo(w, y); }
+  ctx.stroke();
+
+  // clouds: drift with the wind in the ground view, at rest in the balloon view
+  const T = Math.max(vw, vh) * 1.35, sx = pl.frame === 'ground' ? pl.phase[0] : 0, sy = pl.frame === 'ground' ? pl.phase[1] : 0;
+  const R = Math.min(w, h) * 0.035;
+  ctx.fillStyle = C.cloud;
+  for (const c of pl.clouds) {
+    const x = SX(viewL - T * 0.1 + mod(c.u * T + sx - viewL + T * 0.1, T)), y = SY(viewB - T * 0.1 + mod(c.v * T + sy - viewB + T * 0.1, T));
+    const r = R * (0.7 + 0.7 * c.r);
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, 7); ctx.arc(x + r * 0.9, y + r * 0.2, r * 0.75, 0, 7); ctx.arc(x - r * 0.9, y + r * 0.25, r * 0.7, 0, 7); ctx.arc(x + r * 0.2, y - r * 0.5, r * 0.7, 0, 7);
+    ctx.fill();
+  }
+
+  // route, start, airport (fixed to the ground)
+  const A = [d[0] * D - off[0], d[1] * D - off[1]], S0 = [-off[0], -off[1]];
+  dashed(ctx, SX(S0[0]), SY(S0[1]), SX(A[0]), SY(A[1]), C.muted, 1.5, [3, 6]);
+  ctx.fillStyle = C.city; ctx.beginPath(); ctx.arc(SX(S0[0]), SY(S0[1]), 6, 0, 7); ctx.fill();
+  text(ctx, 'Start', SX(S0[0]) + 10, SY(S0[1]) + 18, { size: 14, bold: true });
+  ctx.save(); ctx.translate(SX(A[0]), SY(A[1])); ctx.rotate(p.rt * DEG);
+  ctx.fillStyle = C.city; ctx.fillRect(-4, -18, 8, 36); ctx.restore();
+  if (pl.chal) { ctx.beginPath(); ctx.arc(SX(A[0]), SY(A[1]), Math.max(10 * k, 6), 0, 7); ctx.strokeStyle = C.accent; ctx.lineWidth = 2; ctx.stroke(); }
+  text(ctx, 'Airport', SX(A[0]) + 14, SY(A[1]) - 12, { size: 14, bold: true });
+
+  // predicted path (ground view only)
+  const va = v.gx * d[0] + v.gy * d[1];
+  if (pl.showPred && !pl.hide && !s.done && pl.frame === 'ground' && va > 1e-6) {
+    const tt = (D - (s.x * d[0] + s.y * d[1])) / va, ex = s.x + v.gx * tt, ey = s.y + v.gy * tt;
+    dashed(ctx, SX(s.x), SY(s.y), SX(ex), SY(ey), C.result, 1.6); cross(ctx, SX(ex), SY(ey), C.result);
+  }
+  // trail
+  if (s.trail.length > 1) {
+    ctx.strokeStyle = C.trail; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.beginPath();
+    s.trail.forEach((q, i) => { const X = SX(pl.frame === 'ground' ? q.x : q.x - q.sx), Y = SY(pl.frame === 'ground' ? q.y : q.y - q.sy); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+    ctx.lineTo(SX(px), SY(py)); ctx.stroke();
+  }
+  // plane and vectors
+  const bx = SX(px), by = SY(py);
+  if (pl.showVec) {
+    const av = Math.min(w, h) * 0.2 / 250;
+    const P = [bx + v.ax * av, by - v.ay * av];
+    if (pl.frame === 'ground') {
+      const Q = [P[0] + v.wx * av, P[1] - v.wy * av];
+      arrow(ctx, bx, by, P[0], P[1], C.boat, 3); arrow(ctx, P[0], P[1], Q[0], Q[1], C.flow, 3); arrow(ctx, bx, by, Q[0], Q[1], C.result, 3.5);
+    } else arrow(ctx, bx, by, P[0], P[1], C.boat, 3);
+  }
+  drawPlane(ctx, bx, by, Math.atan2(-Math.cos(p.hd * DEG), Math.sin(p.hd * DEG)), C.boat);
+
+  // HUD: compass, wind, scale, clock
+  const cx = w - 34, cy = 38;
+  ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, 20, 0, 7); ctx.stroke();
+  arrow(ctx, cx, cy + 12, cx, cy - 14, C.ink, 2, false); text(ctx, 'N', cx, cy - 26, { size: 13, bold: true, align: 'center' });
+  if (p.w > 0) {
+    const wx0 = w - 34, wy0 = cy + 62, ux = Math.sin(p.wd * DEG), uy = -Math.cos(p.wd * DEG);
+    arrow(ctx, wx0 - ux * 16, wy0 - uy * 16, wx0 + ux * 16, wy0 + uy * 16, C.flow, 3);
+    text(ctx, 'wind', wx0, wy0 + 32, { size: 12, align: 'center', color: C.ink });
+  }
+  const sl = niceStep(k, 70); ctx.strokeStyle = C.ink; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(12, h - 34); ctx.lineTo(12 + sl * k, h - 34); ctx.moveTo(12, h - 39); ctx.lineTo(12, h - 29); ctx.moveTo(12 + sl * k, h - 39); ctx.lineTo(12 + sl * k, h - 29); ctx.stroke();
+  text(ctx, `${sl} km`, 12 + sl * k + 8, h - 29, { size: 13 });
+  text(ctx, pl.frame === 'ground' ? 'Watching from the ground' : 'Watching from a balloon drifting with the wind', 12, h - 10, { size: 14, halo: true });
+  text(ctx, hm(s.t), w - 12, h - 12, { size: 16, bold: true, align: 'right' });
+  if (pl.frame === 'air' && s.launched) text(ctx, 'In this view the plane only shows its velocity relative to the air.', 12, 22, { size: 13 });
+}
+function drawSkyVec(cv) {
+  const { ctx, w, h } = cv; if (!w) return;
+  const v = plVel(), d = plDir();
+  const pts = [[0, 0], [v.ax, v.ay], [v.gx, v.gy]];
+  if (!pl.drag || !pl.vt) pl.vt = fitT(pts, w, h, 150);
+  const T = pl.vt, S = ([a, b]) => [T.ox + a * T.s, T.oy - b * T.s];
+  ctx.clearRect(0, 0, w, h);
+  const O = S([0, 0]), P = S([v.ax, v.ay]), Q = S([v.gx, v.gy]);
+  const L = Math.max(Math.hypot(v.ax, v.ay), Math.hypot(v.gx, v.gy)) * 1.15, Aend = S([d[0] * L, d[1] * L]);
+  dashed(ctx, O[0], O[1], Aend[0], Aend[1], C.muted, 1.5, [3, 6]);
+  text(ctx, 'toward the airport', Aend[0], Aend[1] + (d[1] >= 0 ? -8 : 16), { size: 12, color: C.muted, align: 'center' });
+  text(ctx, 'N ↑', w - 10, 18, { size: 13, color: C.muted, align: 'right' });
+  arrow(ctx, O[0], O[1], P[0], P[1], C.boat, 3.5);
+  arrow(ctx, P[0], P[1], Q[0], Q[1], C.flow, 3.5);
+  arrow(ctx, O[0], O[1], Q[0], Q[1], C.result, 4);
+  const cr = v.ax * v.gy - v.ay * v.gx;     // which side the resultant falls on
+  labelVec(ctx, O, P, 'plane, air', C.boat, cr > 0 ? 1 : -1);
+  labelVec(ctx, P, Q, 'air, ground', C.flow, cr > 0 ? 1 : -1);
+  labelVec(ctx, O, Q, 'plane, ground', C.result, cr > 0 ? -1 : 1);
+  const lk = pl.locked();
+  if (!lk) { handle(ctx, P[0], P[1], C.boat, pl.drag === 'P'); handle(ctx, Q[0], Q[1], C.flow, pl.drag === 'Q'); }
+  pl.handles = lk ? [] : [{ id: 'P', x: P[0], y: P[1] }, { id: 'Q', x: Q[0], y: Q[1] }];
+}
+function plUI() {
+  const p = pl.p, v = plVel(), s = pl.s, H = pl.hide, d = plDir(), n = plRight();
+  setSlider('pl-va', p.va); setSlider('pl-hd', p.hd); setSlider('pl-w', p.w); setSlider('pl-wd', p.wd); setSlider('pl-rt', p.rt);
+  setTxt('pl-va-o', `${p.va.toFixed(0)} km/h`);
+  setTxt('pl-hd-o', named(p.hd));
+  setTxt('pl-w-o', `${p.w.toFixed(0)} km/h`);
+  setTxt('pl-wd-o', p.w > 0 ? named(p.wd) : '—');
+  setTxt('pl-rt-o', named(p.rt, 0));
+  setTxt('pl-e1', H ? '?' : sgn(v.ax, 1)); setTxt('pl-e2', H ? '?' : sgn(v.wx, 1)); setTxt('pl-e3', H ? '?' : sgn(v.gx, 1));
+  setTxt('pl-e4', H ? '?' : sgn(v.ay, 1)); setTxt('pl-e5', H ? '?' : sgn(v.wy, 1)); setTxt('pl-e6', H ? '?' : sgn(v.gy, 1));
+  const q = x => H ? '?' : x, gs = Math.hypot(v.gx, v.gy), tr = bearingOf(v.gx, v.gy);
+  setTxt('pl-r1', q(`${gs.toFixed(0)} km/h`));
+  setTxt('pl-r2', q(gs < 0.5 ? 'hovering' : named(tr)));
+  let crab = Math.abs(mod(tr - p.hd + 180, 360) - 180);
+  setTxt('pl-r3', q(gs < 0.5 ? '—' : `${crab.toFixed(1)}°`));
+  const va = v.gx * d[0] + v.gy * d[1];
+  if (va > 1e-6) {
+    const t = D / va, off = (v.gx * n[0] + v.gy * n[1]) * t;
+    setTxt('pl-r4', q(hm(t)));
+    setTxt('pl-r5', q(Math.abs(off) <= 10 ? (Math.abs(off) < 0.5 ? 'right on the airport' : `on target (${Math.abs(off).toFixed(0)} km off)`) : plMissText(off)));
+  } else { setTxt('pl-r4', q('never')); setTxt('pl-r5', q('never gets there')); }
+  setTxt('pl-status', s.msg || (s.launched ? '' : 'Set the vectors, then take off. You can change them during the flight.'));
+  $('pl-status').className = 'status ' + (s.cls || '');
+  setTxt('pl-go', s.done ? 'Fly again' : s.launched ? 'Restart' : 'Take off');
+  setTxt('pl-pause', s.paused ? 'Resume' : 'Pause');
+  const lk = pl.locked();
+  for (const id of ['pl-va', 'pl-hd', 'pl-p-point', 'pl-p-fix', 'pl-p-head', 'pl-p-tail']) $(id).disabled = lk;
+  for (const id of ['pl-w', 'pl-wd', 'pl-rt']) $(id).disabled = !!pl.chal;
+  $('pl-p-head').disabled = $('pl-p-tail').disabled = lk || !!pl.chal;
+}
+function plCorrect() {
+  const p = pl.p, d = plDir(), n = plRight(), v = plVel();
+  const wn = v.wx * n[0] + v.wy * n[1], s = -wn / p.va;
+  if (Math.abs(s) >= 1) { pl.s.msg = 'The wind is too strong sideways for this airspeed. Speed up the plane first.'; pl.s.cls = 'miss'; return; }
+  const c = Math.sqrt(1 - s * s), hx = s * n[0] + c * d[0], hy = s * n[1] + c * d[1];
+  p.hd = Math.round(bearingOf(hx, hy) * 10) / 10 % 360;
+  if (!pl.s.launched) { pl.s.msg = ''; pl.s.cls = ''; }
+}
+function plChallenge() {
+  const rt = 5 * Math.floor(Math.random() * 72), side = Math.random() < 0.5 ? -1 : 1;
+  const w = 5 * Math.round((40 + Math.random() * 80) / 5), wd = mod(rt + side * (45 + 10 * Math.floor(Math.random() * 10)), 360);
+  pl.chal = {}; Object.assign(pl.p, { rt, w, wd, hd: rt, va: 200 });
+  plReset();
+  $('pl-chal').hidden = false;
+  $('pl-chal').innerHTML = `<b>Landing challenge.</b> The airport is 400 km away at ${named(rt, 0)}. The wind blows ${w} km/h toward ${named(wd, 0)}. Choose an airspeed and heading that reach the airport (within 10 km), then take off. Your settings lock once the plane leaves.
+    <div class="presets" style="margin-top:8px"><button class="btn" id="pl-chal-new">New challenge</button><button class="btn" id="pl-chal-end">End challenge</button></div>`;
+  $('pl-chal-new').onclick = plChallenge;
+  $('pl-chal-end').onclick = () => { pl.chal = null; $('pl-chal').hidden = true; plReset(); };
+}
+
+/* ---------- wiring ---------- */
+rvReset(); plReset();
+const rvScene = makeCanvas($('rv-scene')), rvVec = makeCanvas($('rv-vec'));
+const plScene = makeCanvas($('pl-scene')), plVecC = makeCanvas($('pl-vec'));
+
+const bindRange = (id, obj, key) => {
+  const el = $(id);
+  el.addEventListener('input', () => { obj[key] = parseFloat(el.value); });
+};
+bindRange('rv-vb', rv.p, 'vb'); bindRange('rv-th', rv.p, 'th'); bindRange('rv-vc', rv.p, 'vc');
+$('rv-W').addEventListener('input', e => { rv.p.W = parseFloat(e.target.value); if (!rv.s.launched) rv.cam = null; else if (rv.s.y > rv.p.W) { rv.p.W = Math.ceil(rv.s.y / 10) * 10; } });
+bindRange('pl-va', pl.p, 'va'); bindRange('pl-hd', pl.p, 'hd'); bindRange('pl-w', pl.p, 'w'); bindRange('pl-wd', pl.p, 'wd');
+$('pl-rt').addEventListener('input', e => { pl.p.rt = parseFloat(e.target.value); if (pl.s.launched) plReset(); });
+
+$('rv-go').onclick = rvLaunch; $('rv-reset').onclick = rvReset; $('rv-pause').onclick = () => { rv.s.paused = !rv.s.paused; };
+$('pl-go').onclick = plLaunch; $('pl-reset').onclick = plReset; $('pl-pause').onclick = () => { pl.s.paused = !pl.s.paused; };
+$('rv-speed').onchange = e => { rv.speed = parseFloat(e.target.value); };
+$('pl-speed').onchange = e => { pl.speed = parseFloat(e.target.value); };
+const frameBtns = (a, b, sim, va, vb) => {
+  const set = f => { sim.frame = f; $(a).setAttribute('aria-pressed', f === va); $(b).setAttribute('aria-pressed', f === vb); };
+  $(a).onclick = () => set(va); $(b).onclick = () => set(vb);
+};
+frameBtns('rv-f-ground', 'rv-f-water', rv, 'ground', 'water');
+frameBtns('pl-f-ground', 'pl-f-air', pl, 'ground', 'air');
+$('rv-c-vec').onchange = e => { rv.showVec = e.target.checked; };
+$('rv-c-pred').onchange = e => { rv.showPred = e.target.checked; };
+$('rv-c-hide').onchange = e => { rv.hide = e.target.checked; };
+$('pl-c-vec').onchange = e => { pl.showVec = e.target.checked; };
+$('pl-c-pred').onchange = e => { pl.showPred = e.target.checked; };
+$('pl-c-hide').onchange = e => { pl.hide = e.target.checked; };
+
+$('rv-p-across').onclick = () => { rv.p.th = 0; };
+$('rv-p-land').onclick = () => {
+  const { vb, vc } = rv.p;
+  if (vc >= vb) { rv.s.msg = 'The current is at least as fast as the boat, so no heading lands straight across. Speed up the boat or slow the current.'; rv.s.cls = 'miss'; return; }
+  rv.p.th = -Math.asin(vc / vb) / DEG; if (!rv.s.launched) { rv.s.msg = ''; rv.s.cls = ''; }
+};
+$('rv-p-chal').onclick = rvChallenge;
+$('pl-p-point').onclick = () => { pl.p.hd = pl.p.rt; };
+$('pl-p-fix').onclick = plCorrect;
+$('pl-p-head').onclick = () => { Object.assign(pl.p, { hd: pl.p.rt, wd: mod(pl.p.rt + 180, 360), w: Math.max(pl.p.w, 60) }); };
+$('pl-p-tail').onclick = () => { Object.assign(pl.p, { hd: pl.p.rt, wd: pl.p.rt, w: Math.max(pl.p.w, 60) }); };
+
+attachDrag(rvVec, rv, (id, x, y) => {
+  if (id === 'P') { rv.p.vb = Math.round(clamp(Math.hypot(x, y), 0.5, 6) * 10) / 10; rv.p.th = clamp(Math.round(Math.atan2(x, Math.max(y, 0.0001)) / DEG * 2) / 2, -85, 85); }
+  else { const v = rvVel(); if (!rv.chal) rv.p.vc = Math.round(clamp(x - v.bx, 0, 5) * 10) / 10; }
+});
+attachDrag(plVecC, pl, (id, x, y) => {
+  if (id === 'P') { pl.p.va = 5 * Math.round(clamp(Math.hypot(x, y), 100, 400) / 5); pl.p.hd = Math.round(bearingOf(x, y)) % 360; }
+  else if (!pl.chal) { const v = plVel(), wx = x - v.ax, wy = y - v.ay; pl.p.w = 5 * Math.round(clamp(Math.hypot(wx, wy), 0, 150) / 5); if (Math.hypot(wx, wy) > 3) pl.p.wd = Math.round(bearingOf(wx, wy)) % 360; }
+});
+
+/* tabs */
+let active = 'river';
+function show(tab) {
+  active = tab;
+  $('river').hidden = tab !== 'river'; $('plane').hidden = tab !== 'plane';
+  $('rv-prompts').hidden = tab !== 'river'; $('pl-prompts').hidden = tab !== 'plane';
+  $('tab-river').setAttribute('aria-selected', tab === 'river'); $('tab-plane').setAttribute('aria-selected', tab === 'plane');
+  try { history.replaceState(null, '', '#' + tab); } catch (e) {}
+}
+$('tab-river').onclick = () => show('river'); $('tab-plane').onclick = () => show('plane');
+if (location.hash === '#plane') show('plane');
+
+/* loop */
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (active === 'river') { rvStep(dt * rv.speed); drawRiver(rvScene); drawRiverVec(rvVec); rvUI(); }
+  else { plStep(dt * pl.speed); drawSky(plScene); drawSkyVec(plVecC); plUI(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>

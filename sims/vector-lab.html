@@ -1,0 +1,1800 @@
+<title>Vector Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caladea:ital,wght@0,400;0,700;1,400;1,700&display=swap">
+<style>
+/* Layout: one screen on a laptop. Header with tabs, then the drawing (left) and a panel (right).
+   Below 941px wide or 600px tall it stacks and scrolls.
+   Color follows the Unit 2 slides: blue = x component, orange = y component, navy = the whole vector. */
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #1b2433;
+  --muted: #566275;
+  --line: #d3d9e2;
+  --soft: #f5f7fa;
+  --accent: #a84e0c;
+  --tab-on: #14213d;
+  --tab-on-ink: #f6f4ee;
+  --x: #2257b8;
+  --y: #b04a0a;
+  --y-ink: #ffffff;
+  --res: #14213d;
+  --leg: #6b7a90;
+  --sky: #f7f9fc;
+  --grid: #dfe6ef;
+  --axis: #8a97aa;
+  --halo: rgba(255, 255, 255, 0.92);
+  --good: #2f7d4a;
+  --bad: #b3261e;
+  --note: #fbebdd;
+  --good-soft: #e3f2e8;
+  --bad-soft: #fbe5e3;
+  --pick: rgba(168, 78, 12, 0.13);
+  --hover: rgba(34, 87, 184, 0.08);
+  --honors: #7a3aa6;
+  --honors-soft: #f1e8f8;
+  --shade: rgba(14, 21, 32, 0.28);
+  --serif: Cambria, Caladea, Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1520; --surface: #162030; --ink: #e6ebf2; --muted: #9eabbf; --line: #2a3850; --soft: #1b2738;
+    --accent: #f0a052; --tab-on: #f0a052; --tab-on-ink: #14213d;
+    --x: #79aefc; --y: #f08a3c; --y-ink: #1b1206; --res: #f2f4f8; --leg: #8d9bb0;
+    --sky: #111b29; --grid: #1f2c40; --axis: #5d6d86; --halo: rgba(14, 21, 32, 0.9);
+    --good: #62c785; --bad: #ff8077; --note: #2b2116; --good-soft: #17301f; --bad-soft: #3a1c1a;
+    --pick: rgba(240, 160, 82, 0.16); --hover: rgba(121, 174, 252, 0.10);
+    --honors: #c99bf0; --honors-soft: #2a1f38; --shade: rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1520; --surface: #162030; --ink: #e6ebf2; --muted: #9eabbf; --line: #2a3850; --soft: #1b2738;
+  --accent: #f0a052; --tab-on: #f0a052; --tab-on-ink: #14213d;
+  --x: #79aefc; --y: #f08a3c; --y-ink: #1b1206; --res: #f2f4f8; --leg: #8d9bb0;
+  --sky: #111b29; --grid: #1f2c40; --axis: #5d6d86; --halo: rgba(14, 21, 32, 0.9);
+  --good: #62c785; --bad: #ff8077; --note: #2b2116; --good-soft: #17301f; --bad-soft: #3a1c1a;
+  --pick: rgba(240, 160, 82, 0.16); --hover: rgba(121, 174, 252, 0.10);
+  --honors: #c99bf0; --honors-soft: #2a1f38; --shade: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--bg); color: var(--ink);
+  font-family: var(--serif); font-size: 16px; line-height: 1.4;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 28px;
+}
+.wrap { max-width: 1440px; margin: 0 auto; display: grid; gap: 10px; }
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; min-width: 0; }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0; font-weight: 700; }
+h1 { font-size: 24px; line-height: 1.1; margin: 0; }
+.nav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tab {
+  font: inherit; font-size: 15px; padding: 6px 15px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.tab[aria-selected="true"] { background: var(--tab-on); color: var(--tab-on-ink); border-color: var(--tab-on); font-weight: 700; }
+.tab.try { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.tab.hon { border-color: var(--honors); color: var(--honors); font-weight: 700; }
+.tab.hon[aria-pressed="true"] { background: var(--honors); color: var(--surface); }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.view { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; }
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.qbar { padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 16px; min-width: 0; }
+.qbar .lbl { font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-right: 6px; }
+.qbar:empty { display: none; }
+.cv { position: relative; min-height: 0; aspect-ratio: 4 / 3; }
+.cv canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.foot { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; padding: 6px 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+.foot b { color: var(--ink); }
+.foot .sp { margin-left: auto; }
+.sw { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; position: relative; top: -2px; }
+.sw.x { background: var(--x); } .sw.y { background: var(--y); } .sw.res { background: var(--res); height: 4px; } .sw.leg { background: var(--leg); height: 4px; }
+
+.panel { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.card > * { flex: none; }
+.card h2 { font-size: 13px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin: 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card.hcard { border-color: var(--honors); }
+.card p { margin: 0; }
+.pill { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--honors-soft); color: var(--honors); white-space: nowrap; }
+.score { font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+body:not(.honors) .honly { display: none !important; }
+
+.seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.seg.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.seg.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.btn {
+  font: inherit; font-size: 15px; padding: 5px 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--soft); color: var(--ink);
+}
+.seg .btn { padding: 4px 4px; font-size: 14px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--y); border-color: var(--y); color: var(--y-ink); font-weight: 700; }
+.btn.small { font-size: 13px; padding: 2px 9px; }
+.btn[aria-pressed="true"] { background: var(--tab-on); color: var(--tab-on-ink); border-color: var(--tab-on); font-weight: 700; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+select { font: inherit; font-size: 15px; padding: 3px 4px; border-radius: 6px; border: 1px solid var(--line); background: var(--soft); color: var(--ink); max-width: 100%; }
+input.n {
+  font: inherit; font-size: 15px; width: 5em; padding: 3px 6px; text-align: right; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--soft); color: var(--ink);
+}
+input.n.good, select.good { border-color: var(--good); background: var(--good-soft); }
+input.n.bad, select.bad { border-color: var(--bad); background: var(--bad-soft); }
+.dir { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.dir input.n { width: 4.2em; }
+.arow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 16px; }
+.arow .eqv { min-width: 2.4em; }
+.mark { font-weight: 700; width: 1.1em; display: inline-block; text-align: center; }
+.mark.ok { color: var(--good); } .mark.no { color: var(--bad); }
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 6px; }
+fieldset:disabled { opacity: 0.5; }
+.fb { border-radius: 8px; padding: 6px 10px; font-size: 14.5px; margin: 0; }
+.fb:empty { display: none; }
+.fb.ok { background: var(--good-soft); color: var(--ink); border-left: 4px solid var(--good); }
+.fb.no { background: var(--bad-soft); color: var(--ink); border-left: 4px solid var(--bad); }
+.fb.info { background: var(--note); }
+.sol { background: var(--soft); border-radius: 8px; padding: 8px 10px; font-size: 14.5px; display: grid; gap: 3px; }
+.sol p { margin: 0; }
+.checks { display: flex; flex-wrap: wrap; gap: 3px 14px; }
+.checks label { display: flex; gap: 6px; align-items: center; font-size: 14px; cursor: pointer; }
+.checks input { accent-color: var(--tab-on); width: 15px; height: 15px; flex: none; }
+.checks.hon input { accent-color: var(--honors); }
+.muted { color: var(--muted); font-size: 14px; }
+.big { font-size: 20px; font-weight: 700; color: var(--res); font-variant-numeric: tabular-nums; }
+.xc { color: var(--x); } .yc { color: var(--y); } .rc { color: var(--res); }
+.eq { font-size: 16.5px; font-variant-numeric: tabular-nums; margin: 0; }
+i.v { font-style: italic; }
+sub, sup { font-size: 0.7em; font-style: normal; line-height: 0; }
+ul.names { margin: 0; padding-left: 18px; font-size: 15px; display: grid; gap: 1px; }
+ul.names li.on { font-weight: 700; }
+.note { background: var(--note); border-radius: 8px; padding: 6px 10px; font-size: 14.5px; margin: 0; }
+details.tv summary { cursor: pointer; font-size: 14px; color: var(--muted); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+details.tv > div { display: grid; gap: 6px; margin-top: 6px; }
+.rng { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 15px; }
+.rng input[type="range"] { width: 100%; min-width: 0; margin: 0; accent-color: var(--res); }
+table.ct { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 15px; }
+table.ct th, table.ct td { padding: 3px 4px; text-align: left; vertical-align: middle; }
+table.ct thead th { font-size: 13px; color: var(--muted); font-weight: 700; }
+table.ct thead th.x { color: var(--x); } table.ct thead th.y { color: var(--y); }
+table.ct tbody tr + tr td { border-top: 1px solid var(--line); }
+table.ct td.leg { font-size: 14px; line-height: 1.25; min-width: 7.5em; }
+table.ct td.leg b { font-size: 15px; }
+table.ct tr.sum td { border-top: 2px solid var(--muted); }
+table.ct input.n { width: 100%; min-width: 4.2em; }
+.tblwrap { overflow-x: auto; }
+.rule { font-size: 15px; }
+.rule .big { font-size: 19px; }
+
+/* Desktop: fill the screen, no page scroll */
+@media (min-width: 941px) {
+  .view { grid-template-columns: minmax(0, 1fr) clamp(340px, 34%, 470px); }
+}
+@media (min-width: 941px) and (min-height: 600px) {
+  html, body { height: 100%; }
+  body { padding-block: 8px; }
+  .wrap { height: 100%; grid-template-rows: auto minmax(0, 1fr); }
+  .view { min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  .cv { aspect-ratio: auto; }
+  .panel { overflow-y: auto; min-height: 0; padding-right: 2px; }
+}
+
+/* Try this drawer */
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 20; width: min(400px, 100%);
+  background: var(--surface); border-left: 1px solid var(--line); box-shadow: -10px 0 30px var(--shade);
+  overflow-y: auto; display: grid; align-content: start; gap: 12px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) 18px;
+}
+.drawer-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.drawer-head h2 { margin: 0; font-size: 22px; }
+.prompts { display: grid; gap: 10px; }
+.prompt { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 0; }
+.prompt h3 { margin: 0 0 4px; font-size: 17px; text-wrap: balance; }
+.prompt p { margin: 0; font-size: 15px; }
+.prompt .q { margin-top: 6px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Vector Lab</h1>
+      <p class="eyebrow">Physics · Unit 2 · Vectors</p>
+    </div>
+    <div class="nav">
+      <div class="nav" role="tablist" aria-label="Vector Lab sections">
+        <button class="tab" role="tab" id="tab-ex" aria-controls="ex" aria-selected="true">Explore</button>
+        <button class="tab" role="tab" id="tab-rs" aria-controls="rs" aria-selected="false">Find the resultant</button>
+        <button class="tab" role="tab" id="tab-cp" aria-controls="cp" aria-selected="false">Find the components</button>
+        <button class="tab" role="tab" id="tab-ml" aria-controls="ml" aria-selected="false">Multiple legs</button>
+      </div>
+      <button class="tab try" id="try-open" aria-expanded="false" aria-controls="drawer">Try this ▸</button>
+      <button class="tab hon" id="honors" aria-pressed="false" title="Adds the honors extras: estimate first, missing leg, leg back home, legs at angles">Honors</button>
+    </div>
+  </header>
+
+  <!-- ======================= EXPLORE ======================= -->
+  <section id="ex" class="view" role="tabpanel" aria-labelledby="tab-ex">
+    <div class="stage">
+      <div class="qbar">
+        <div class="btns" role="tablist" aria-label="Explore views">
+          <button class="btn small" id="exv-drag" aria-pressed="true">Drag a vector</button>
+          <button class="btn small" id="exv-words" aria-pressed="false">Direction words</button>
+          <span class="muted" id="ex-tip">Drag anywhere on the grid to move the tip of the arrow.</span>
+        </div>
+      </div>
+      <div class="cv"><canvas id="ex-cv" aria-label="Vector on a compass grid. Drag to move its tip."></canvas></div>
+      <div class="foot" id="ex-foot">
+        <span><span class="sw x"></span><i class="v">R</i><sub>x</sub> (east–west)</span>
+        <span><span class="sw y"></span><i class="v">R</i><sub>y</sub> (north–south)</span>
+        <span><span class="sw res"></span><i class="v">R</i></span>
+        <span class="sp">Grid squares are 1 m · east (+<i class="v">x</i>) and north (+<i class="v">y</i>) are positive</span>
+      </div>
+    </div>
+
+    <!-- Drag a vector panel -->
+    <div class="panel" id="ex-p-drag">
+      <section class="card">
+        <h2>Measure the angle from</h2>
+        <div class="seg" id="ex-ref">
+          <button class="btn" data-ref="E" aria-pressed="true">East (+<i class="v">x</i>)</button>
+          <button class="btn" data-ref="N" aria-pressed="false">North</button>
+          <button class="btn" data-ref="W" aria-pressed="false">West (−<i class="v">x</i>)</button>
+          <button class="btn" data-ref="S" aria-pressed="false">South</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>This vector</h2>
+        <p class="big" id="ex-name"></p>
+        <p class="muted" id="ex-alt"></p>
+        <p class="note" id="ex-why"></p>
+        <p class="eq xc" id="ex-eqx"></p>
+        <p class="eq yc" id="ex-eqy"></p>
+        <h2>Back to one vector</h2>
+        <p class="eq rc" id="ex-eqr"></p>
+        <p class="eq rc" id="ex-eqt"></p>
+        <h2>Same arrow, every name</h2>
+        <ul class="names" id="ex-names"></ul>
+      </section>
+      <section class="card">
+        <div class="checks">
+          <label><input type="checkbox" id="ex-comp" checked> Components</label>
+          <label><input type="checkbox" id="ex-arc" checked> Angle arc</label>
+          <label><input type="checkbox" id="ex-snap" checked> Snap to 0.5 m</label>
+          <label><input type="checkbox" id="ex-hide"> Hide numbers (predict first)</label>
+        </div>
+        <details class="tv" id="ex-type">
+          <summary>Type a vector</summary>
+          <div>
+            <div class="arow"><i class="v">R</i> = <input class="n" id="ex-tR" inputmode="decimal" value="10.0"> m at <span id="ex-tdir"></span></div>
+            <div class="btns"><button class="btn" id="ex-tgo">Draw it</button><span class="muted" id="ex-tmsg"></span></div>
+          </div>
+        </details>
+      </section>
+    </div>
+
+    <!-- Direction words panel -->
+    <div class="panel" id="ex-p-words" hidden>
+      <section class="card">
+        <div class="seg two">
+          <button class="btn" id="dw-learn" aria-pressed="true">Learn</button>
+          <button class="btn" id="dw-quiz" aria-pressed="false">Check yourself</button>
+        </div>
+      </section>
+      <div id="dw-learnp" class="panel">
+        <section class="card rule">
+          <h2>Reading a direction</h2>
+          <p class="big">θ° <span class="yc">A</span> of <span class="xc">B</span></p>
+          <p>Start facing <b class="xc">B</b>, the direction after “of”. Then turn θ toward <b class="yc">A</b>.</p>
+          <p>The angle touches B's axis, so B's component gets the cosine and the other one gets the sine.</p>
+        </section>
+        <section class="card">
+          <h2>Compare</h2>
+          <div class="arow">
+            <select id="dw-pair" aria-label="Pair of directions">
+              <option value="NE">N of E vs. E of N</option>
+              <option value="NW">N of W vs. W of N</option>
+              <option value="SE">S of E vs. E of S</option>
+              <option value="SW">S of W vs. W of S</option>
+            </select>
+            <button class="btn" id="dw-play">▶ Play</button>
+          </div>
+          <div class="rng"><label for="dw-th">Angle</label><input type="range" id="dw-th" min="5" max="85" step="5" value="30"><output id="dw-tho">30°</output></div>
+          <div class="tblwrap">
+            <table class="ct" id="dw-tbl">
+              <thead><tr><th>10.0 km hike</th><th class="x">east–west (<i class="v">x</i>)</th><th class="y">north–south (<i class="v">y</i>)</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="note" id="dw-apart"></p>
+        </section>
+        <section class="card">
+          <h2>Using the x-axis instead</h2>
+          <p>Velocities and forces often use the <i class="v">x</i>-axis: <b>above</b> or <b>below</b> the <b>+<i class="v">x</i>-axis</b> (east side) or the <b>−<i class="v">x</i>-axis</b> (west side).</p>
+          <p class="muted" id="dw-axis"></p>
+        </section>
+      </div>
+      <div id="dw-quizp" class="panel" hidden>
+        <section class="card">
+          <h2>Check yourself <span class="score" id="dw-score"></span></h2>
+          <p id="dw-prompt" style="font-size:17px"></p>
+          <div id="dw-namebox" class="arow" hidden><span id="dw-dir"></span><button class="btn primary" id="dw-check">Check</button></div>
+          <p class="fb" id="dw-fb"></p>
+          <div class="btns"><button class="btn" id="dw-next">Next ›</button></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= FIND THE RESULTANT ======================= -->
+  <section id="rs" class="view" role="tabpanel" aria-labelledby="tab-rs" hidden>
+    <div class="stage">
+      <div class="qbar" id="rs-q"></div>
+      <div class="cv"><canvas id="rs-cv" aria-label="Sketch area. Click the quadrant where the resultant points."></canvas></div>
+      <div class="foot"><span id="rs-foot"></span><span class="sp">East (+<i class="v">x</i>) and north (+<i class="v">y</i>) are positive</span></div>
+    </div>
+    <div class="panel">
+      <section class="card">
+        <h2>Step 1 · Sketch <span class="score" id="rs-score"></span></h2>
+        <p id="rs-s1"></p>
+      </section>
+      <section class="card hcard honly" id="rs-estc">
+        <h2>Estimate first <span class="pill">Honors</span></h2>
+        <fieldset id="rs-estf">
+          <div class="arow">Without a calculator, <span id="rs-esym"></span> is about <input class="n" id="rs-eR" inputmode="decimal"> <span class="rs-u"></span></div>
+          <div class="arow">Angle from the <i class="v">x</i>-axis is
+            <button class="btn small" id="rs-elt" aria-pressed="false">less than 45°</button>
+            <button class="btn small" id="rs-egt" aria-pressed="false">more than 45°</button></div>
+          <div class="btns"><button class="btn" id="rs-elock">Lock in my estimate</button></div>
+        </fieldset>
+        <p class="fb" id="rs-efb"></p>
+      </section>
+      <section class="card">
+        <h2>Step 2 · Calculate</h2>
+        <fieldset id="rs-f" disabled>
+          <div class="arow"><span class="eqv" id="rs-msym"></span> = <input class="n" id="rs-R" inputmode="decimal" aria-label="Magnitude"> <span class="rs-u"></span><span class="mark" id="rs-mR"></span></div>
+          <div class="arow"><span class="eqv">θ</span> = <span id="rs-dir"></span><span class="mark" id="rs-mD"></span></div>
+          <div class="btns">
+            <button class="btn primary" id="rs-check">Check</button>
+            <button class="btn" id="rs-hint">Hint</button>
+            <button class="btn" id="rs-show" disabled>Show a solution</button>
+          </div>
+        </fieldset>
+        <p class="fb" id="rs-fb"></p>
+        <div class="sol" id="rs-sol" hidden></div>
+      </section>
+      <section class="card">
+        <div class="btns"><button class="btn" id="rs-new">New problem ›</button></div>
+        <div class="checks">
+          <label><input type="checkbox" id="rs-tw" checked> Displacements</label>
+          <label><input type="checkbox" id="rs-tv" checked> Velocities</label>
+          <label><input type="checkbox" id="rs-tf" checked> Forces</label>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ======================= FIND THE COMPONENTS ======================= -->
+  <section id="cp" class="view" role="tabpanel" aria-labelledby="tab-cp" hidden>
+    <div class="stage">
+      <div class="qbar" id="cp-q"></div>
+      <div class="cv"><canvas id="cp-cv" aria-label="Sketch area. Click the quadrant where the vector points."></canvas></div>
+      <div class="foot"><span id="cp-foot"></span><span class="sp">East (+<i class="v">x</i>) and north (+<i class="v">y</i>) are positive</span></div>
+    </div>
+    <div class="panel">
+      <section class="card">
+        <h2>Step 1 · Sketch <span class="score" id="cp-score"></span></h2>
+        <p id="cp-s1"></p>
+        <div class="btns honly"><button class="btn" id="cp-elock" hidden>Lock in my estimate</button></div>
+        <p class="fb" id="cp-efb"></p>
+      </section>
+      <section class="card">
+        <h2>Step 2 · Calculate</h2>
+        <fieldset id="cp-f" disabled>
+          <div class="arow"><span class="eqv xc" id="cp-sx"></span> = <input class="n" id="cp-x" inputmode="decimal" aria-label="x component"> <span class="cp-u"></span><span class="mark" id="cp-mx"></span></div>
+          <div class="arow"><span class="eqv yc" id="cp-sy"></span> = <input class="n" id="cp-y" inputmode="decimal" aria-label="y component"> <span class="cp-u"></span><span class="mark" id="cp-my"></span></div>
+          <p class="muted">Include the sign: west or left (−<i class="v">x</i>) and south or down (−<i class="v">y</i>) are negative.</p>
+          <div class="btns">
+            <button class="btn primary" id="cp-check">Check</button>
+            <button class="btn" id="cp-hint">Hint</button>
+            <button class="btn" id="cp-show" disabled>Show a solution</button>
+          </div>
+        </fieldset>
+        <p class="fb" id="cp-fb"></p>
+        <div class="sol" id="cp-sol" hidden></div>
+      </section>
+      <section class="card">
+        <div class="btns"><button class="btn" id="cp-new">New problem ›</button></div>
+        <div class="checks">
+          <label><input type="checkbox" id="cp-tw" checked> Displacements</label>
+          <label><input type="checkbox" id="cp-tv" checked> Velocities</label>
+          <label><input type="checkbox" id="cp-tf" checked> Forces</label>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ======================= MULTIPLE LEGS ======================= -->
+  <section id="ml" class="view" role="tabpanel" aria-labelledby="tab-ml" hidden>
+    <div class="stage">
+      <div class="qbar" id="ml-q"></div>
+      <div class="cv"><canvas id="ml-cv" aria-label="Map of the legs drawn tip to tail"></canvas></div>
+      <div class="foot"><span id="ml-foot"></span><span class="sp" id="ml-scale"></span></div>
+    </div>
+    <div class="panel">
+      <section class="card">
+        <h2>Component table <span class="score" id="ml-score"></span></h2>
+        <div class="tblwrap">
+          <table class="ct" id="ml-tbl">
+            <thead><tr><th>Leg</th><th class="x">x (<span class="ml-u"></span>)</th><th class="y">y (<span class="ml-u"></span>)</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="arow"><span class="eqv" id="ml-fsym"></span> = <input class="n" id="ml-R" inputmode="decimal" aria-label="Magnitude"> <span class="ml-u"></span><span class="mark" id="ml-mR"></span></div>
+        <div class="arow"><span class="eqv">θ</span> = <span id="ml-dir"></span><span class="mark" id="ml-mD"></span></div>
+        <div class="btns">
+          <button class="btn primary" id="ml-check">Check</button>
+          <button class="btn" id="ml-hint">Hint</button>
+          <button class="btn" id="ml-show" disabled>Show a solution</button>
+        </div>
+        <p class="fb" id="ml-fb"></p>
+        <div class="sol" id="ml-sol" hidden></div>
+      </section>
+      <section class="card">
+        <div class="btns">
+          <button class="btn" id="ml-new">New problem ›</button>
+          <label class="muted" for="ml-n">Legs</label>
+          <select id="ml-n"><option>2</option><option selected>3</option><option>4</option></select>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="ml-hide"> Hide the map until I check</label>
+          <label><input type="checkbox" id="ml-comp"> Show each leg's components</label>
+        </div>
+        <div class="honly" style="display:grid;gap:6px">
+          <div class="arow"><span class="pill">Honors</span>
+            <select id="ml-mode" aria-label="Problem type">
+              <option value="result">Find the resultant</option>
+              <option value="missing">Find the missing leg</option>
+              <option value="home">Find the leg back home</option>
+            </select>
+          </div>
+          <div class="checks hon"><label><input type="checkbox" id="ml-ang" checked> Legs at angles</label></div>
+        </div>
+      </section>
+    </div>
+  </section>
+</div>
+
+<aside class="drawer" id="drawer" hidden aria-label="Try this">
+  <div class="drawer-head"><h2>Try this</h2><button class="btn" id="try-close">Close</button></div>
+  <div class="prompts" id="prompts"></div>
+</aside>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const D = Math.PI / 180;
+const SERIF = 'Cambria, Caladea, Georgia, "Times New Roman", serif';
+const mod = a => ((a % 360) + 360) % 360;
+const rnd = (lo, hi, dec) => { const f = Math.pow(10, dec); return Math.round((lo + Math.random() * (hi - lo)) * f) / f; };
+const rint = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const num = s => { const t = String(s).trim().replace(/−/g, '-').replace(/,/g, '.'); return t === '' ? NaN : Number(t); };
+const MINUS = '−';
+function fmt(v, sig = 3) {
+  if (!isFinite(v)) return '?';
+  if (Math.abs(v) < 1e-9) return '0';
+  const a = Math.abs(v);
+  let dp = Math.max(0, sig - 1 - Math.floor(Math.log10(a)));
+  dp = Math.min(dp, 3);
+  return (v < 0 ? MINUS : '') + a.toFixed(dp);
+}
+const sfmt = v => (v > 1e-9 ? '+' : '') + fmt(v);
+const fmtA = a => a.toFixed(1);
+const giv = (v, dec) => (v < 0 ? MINUS : '') + Math.abs(v).toFixed(dec);
+const sgiv = (v, dec) => (v > 0 ? '+' : v < 0 ? MINUS : '') + Math.abs(v).toFixed(dec);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const V = (s, sub) => `<i class="v">${s}</i>${sub ? `<sub>${sub}</sub>` : ''}`;
+
+/* ---------- directions ---------- */
+const AX = { E: 0, N: 90, W: 180, S: 270, '+x': 0, '-x': 180 };
+const TURN = { N: 90, S: 270, E: 0, W: 180, above: 90, below: 270 };
+const WORD = { E: 'east', W: 'west', N: 'north', S: 'south', '+x': 'the +x-axis', '-x': 'the −x-axis' };
+const REFLABEL = { E: 'E', W: 'W', N: 'N', S: 'S', '+x': 'the +x-axis', '-x': 'the −x-axis' };
+const TURNLABEL = { N: 'N of', S: 'S of', E: 'E of', W: 'W of', above: 'above', below: 'below' };
+const isHoriz = ref => ref === 'E' || ref === 'W' || ref === '+x' || ref === '-x';
+function phiOf(th, turn, ref) {
+  const d = mod(TURN[turn] - AX[ref]);
+  return d === 90 ? mod(AX[ref] + th) : d === 270 ? mod(AX[ref] - th) : null;
+}
+function thetaIn(phi, turn, ref) {
+  const d = mod(TURN[turn] - AX[ref]);
+  if (d === 90) return mod(phi - AX[ref]);
+  if (d === 270) return mod(AX[ref] - phi);
+  return null;
+}
+function dirName(th, turn, ref, dp = 1) {
+  const t = (typeof th === 'number' ? th.toFixed(dp) : th) + '°';
+  return (ref === '+x' || ref === '-x') ? `${t} ${turn} ${WORD[ref]}` : `${t} ${turn} of ${ref}`;
+}
+function axisWord(phi) {
+  const p = Math.round(mod(phi)) % 360;
+  return { 0: 'east (along the +x-axis)', 90: 'north', 180: 'west (along the −x-axis)', 270: 'south' }[p];
+}
+function isAxisDir(phi) { const p = mod(phi) % 90; return p < 1e-6 || 90 - p < 1e-6; }
+function allNames(phi) {
+  phi = mod(phi);
+  const c = Math.cos(phi * D), s = Math.sin(phi * D);
+  const href = c > 0 ? 'E' : 'W', hturn = s > 0 ? 'N' : 'S';
+  const vref = s > 0 ? 'N' : 'S', vturn = c > 0 ? 'E' : 'W';
+  const th1 = thetaIn(phi, hturn, href), th2 = thetaIn(phi, vturn, vref);
+  return [
+    { th: th1, turn: hturn, ref: href },
+    { th: th2, turn: vturn, ref: vref },
+    { th: th1, turn: s > 0 ? 'above' : 'below', ref: c > 0 ? '+x' : '-x' }
+  ];
+}
+const close = (a, b, rel = 0.01, abs = 1e-9) => Math.abs(a - b) <= Math.max(rel * Math.abs(b), abs);
+function quadWords(phi) {
+  const c = Math.cos(phi * D), s = Math.sin(phi * D);
+  return `${s > 0 ? 'up' : 'down'} and ${c > 0 ? 'right' : 'left'} (${c > 0 ? 'east' : 'west'} and ${s > 0 ? 'north' : 'south'})`;
+}
+function checkDir(phi, d) {
+  const { th, turn, ref } = d;
+  if (!isFinite(th)) return { ok: false, msg: 'Type the angle.' };
+  if (!turn || !ref) return { ok: false, msg: 'Pick both direction words.' };
+  if (th < 0) return { ok: false, msg: 'Use the size of the angle with no minus sign. The direction words say which way it turns.' };
+  if (th > 90) return { ok: false, msg: 'Compass and axis angles are 90° or less. Measure from the axis on the arrow\'s side.' };
+  const tt = thetaIn(phi, turn, ref);
+  const ok = (a, b) => Math.abs(a - b) <= Math.max(0.01 * b, 0.15);
+  if (tt <= 90.0001 && ok(th, tt)) return { ok: true };
+  if (tt <= 90.0001 && ok(th, 90 - tt)) return { ok: false, msg: `That angle is measured from the other axis. Find the angle from ${WORD[ref]}, or keep your angle and change the direction words.` };
+  const h = allNames(phi)[0].th;
+  if (ok(th, h) || ok(th, 90 - h)) return { ok: false, msg: `The size of your angle works, but ${dirName(th, turn, ref)} points into a different quadrant. The arrow points ${quadWords(phi)}.` };
+  if (th < 1.6 && (ok(th, h * D) || ok(th, (90 - h) * D))) return { ok: false, msg: 'That looks like radians. Put your calculator in DEGREE mode.' };
+  return { ok: false, msg: 'Check the angle: use tan⁻¹ with the sizes of the two components (no signs), then name the axis it touches.' };
+}
+function checkMag(v, R, ax, ay) {
+  if (!isFinite(v)) return { ok: false, msg: 'Type the magnitude.' };
+  if (v < 0) return { ok: false, msg: 'A magnitude is never negative. Squaring the components removes their signs.' };
+  if (close(v, R)) return { ok: true };
+  if (close(v, Math.abs(ax) + Math.abs(ay))) return { ok: false, msg: 'You added the sizes like ordinary numbers. Perpendicular components combine with Pythagoras.' };
+  if (close(v, ax * ax + ay * ay)) return { ok: false, msg: 'Almost: take the square root at the end.' };
+  return { ok: false, msg: 'Check the magnitude: square each component, add the squares, then take the square root.' };
+}
+/* v = typed, c = true component; info: {axis:'x'|'y', mag, th, ref, axisLeg} */
+function checkComp(v, c, info) {
+  const floor = Math.max(0.004 * info.scale, 0.005);
+  const tol = Math.max(0.01 * Math.abs(c), floor);
+  const axisName = info.axis === 'x' ? 'x (east–west)' : 'y (north–south)';
+  if (!isFinite(v)) return { ok: false, empty: true, msg: 'Fill in every box.' };
+  if (Math.abs(v - c) <= tol) return { ok: true };
+  const pos = info.axis === 'x' ? 'east' : 'north', neg = info.axis === 'x' ? 'west' : 'south';
+  if (Math.abs(c) > tol && Math.abs(v + c) <= tol) return { ok: false, msg: `The size is right. Check the sign: ${info.who} points ${c > 0 ? pos : neg}, so its ${axisName} component is ${c > 0 ? 'positive' : 'negative'}.` };
+  if (info.axisLeg) {
+    if (Math.abs(c) <= tol) return { ok: false, msg: `${info.who} points straight ${info.dirword}, so it has no ${axisName} part. Put 0 in that column.` };
+    return { ok: false, msg: `${info.who} points straight ${info.dirword}, so the whole ${fmt(info.mag)} goes in the ${info.axis} column, with a ${c > 0 ? 'plus' : 'minus'} sign.` };
+  }
+  const horiz = isHoriz(info.ref);
+  const useCos = (info.axis === 'x') === horiz;
+  const other = info.mag * (useCos ? Math.sin(info.th * D) : Math.cos(info.th * D));
+  if (Math.abs(Math.abs(v) - other) <= Math.max(0.01 * other, floor)) {
+    return { ok: false, msg: `Sine and cosine look swapped. The angle touches ${WORD[info.ref]}, so the ${horiz ? 'x (east–west)' : 'y (north–south)'} component gets the cosine.` };
+  }
+  const rc = Math.abs(info.mag * Math.cos(info.th)), rs = Math.abs(info.mag * Math.sin(info.th));
+  if (Math.abs(Math.abs(v) - rc) <= floor * 2 || Math.abs(Math.abs(v) - rs) <= floor * 2) return { ok: false, msg: 'That looks like a radians answer. Put your calculator in DEGREE mode.' };
+  return { ok: false, msg: `Not yet. Sketch the right triangle for ${info.who}: it is the hypotenuse, and the side touching the angle gets the cosine.` };
+}
+
+/* ---------- direction dropdown builder ---------- */
+function dirBuilder(host, id) {
+  host.innerHTML = `<span class="dir"><input class="n" id="${id}-th" inputmode="decimal" aria-label="Angle in degrees">°
+    <select id="${id}-turn" aria-label="Direction word"><option value="">…</option>${Object.keys(TURNLABEL).map(k => `<option value="${k}">${TURNLABEL[k]}</option>`).join('')}</select>
+    <select id="${id}-ref" aria-label="Reference axis"></select></span>`;
+  const th = $(`#${id}-th`), turn = $(`#${id}-turn`), ref = $(`#${id}-ref`);
+  function fill() {
+    const t = turn.value, keep = ref.value;
+    const opts = (t === 'N' || t === 'S') ? ['E', 'W'] : (t === 'E' || t === 'W') ? ['N', 'S'] : t ? ['+x', '-x'] : ['E', 'W', 'N', 'S', '+x', '-x'];
+    ref.innerHTML = '<option value="">…</option>' + opts.map(o => `<option value="${o}">${REFLABEL[o]}</option>`).join('');
+    if (opts.includes(keep)) ref.value = keep;
+  }
+  turn.addEventListener('change', fill); fill();
+  return {
+    get: () => ({ th: num(th.value), turn: turn.value, ref: ref.value }),
+    clear() { th.value = ''; turn.value = ''; fill(); ref.value = ''; this.mark(''); },
+    set(t, tu, r) { th.value = t; turn.value = tu; fill(); ref.value = r; },
+    mark(cls) { [th, turn, ref].forEach(e => { e.classList.remove('good', 'bad'); if (cls) e.classList.add(cls); }); },
+    els: [th, turn, ref]
+  };
+}
+
+/* ---------- canvas helpers ---------- */
+let C = {};
+function readColors() {
+  ['bg', 'surface', 'ink', 'muted', 'line', 'accent', 'x', 'y', 'res', 'leg', 'sky', 'grid', 'axis', 'halo', 'good', 'bad', 'pick', 'hover', 'honors'].forEach(k => C[k] = css('--' + k));
+}
+readColors();
+const redrawers = [];
+function setupCanvas(cv, draw) {
+  const ctx = cv.getContext('2d');
+  const o = {
+    ctx, w: 1, h: 1,
+    redraw() {
+      const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+      if (r.width < 2 || r.height < 2) return;
+      const W = Math.round(r.width * d), H = Math.round(r.height * d);
+      if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+      o.w = r.width; o.h = r.height;
+      ctx.setTransform(d, 0, 0, d, 0, 0);
+      ctx.clearRect(0, 0, o.w, o.h);
+      draw(ctx, o.w, o.h);
+    }
+  };
+  new ResizeObserver(() => o.redraw()).observe(cv);
+  redrawers.push(o);
+  return o;
+}
+function makeView(rect, b, pad) {
+  const s = Math.min((rect.w - 2 * pad) / (b.x1 - b.x0), (rect.h - 2 * pad) / (b.y1 - b.y0));
+  const cx = rect.x + rect.w / 2 - s * (b.x0 + b.x1) / 2, cy = rect.y + rect.h / 2 + s * (b.y0 + b.y1) / 2;
+  return { s, rect, X: x => cx + x * s, Y: y => cy - y * s, wx: X => (X - cx) / s, wy: Y => (cy - Y) / s };
+}
+function niceStep(s, minPx = 26) {
+  for (const st of [0.5, 1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000]) if (st * s >= minPx) return st;
+  return 10000;
+}
+function drawGrid(ctx, v, step, numbers) {
+  const r = v.rect;
+  const x0 = Math.floor(v.wx(r.x) / step) * step, x1 = v.wx(r.x + r.w);
+  const y0 = Math.floor(v.wy(r.y + r.h) / step) * step, y1 = v.wy(r.y);
+  ctx.save(); ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = x0; x <= x1; x += step) { const X = Math.round(v.X(x)) + 0.5; ctx.moveTo(X, r.y); ctx.lineTo(X, r.y + r.h); }
+  for (let y = y0; y <= y1; y += step) { const Y = Math.round(v.Y(y)) + 0.5; ctx.moveTo(r.x, Y); ctx.lineTo(r.x + r.w, Y); }
+  ctx.stroke();
+  if (numbers) {
+    ctx.fillStyle = C.muted; ctx.font = `11px ${SERIF}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let x = x0; x <= x1; x += step) { if (Math.abs(x) < 1e-9 || Math.round(x / step) % numbers) continue; ctx.fillText((x < 0 ? MINUS : '') + Math.abs(x), v.X(x), v.Y(0) + 4); }
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let y = y0; y <= y1; y += step) { if (Math.abs(y) < 1e-9 || Math.round(y / step) % numbers) continue; ctx.fillText((y < 0 ? MINUS : '') + Math.abs(y), v.X(0) - 5, v.Y(y)); }
+  }
+  ctx.restore();
+}
+function drawAxes(ctx, v, mode) {
+  const r = v.rect, X0 = v.X(0), Y0 = v.Y(0);
+  ctx.save(); ctx.strokeStyle = C.axis; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(r.x, Y0); ctx.lineTo(r.x + r.w, Y0); ctx.moveTo(X0, r.y); ctx.lineTo(X0, r.y + r.h); ctx.stroke();
+  const L = mode === 'xy' ? ['+y', MINUS + 'y', '+x', MINUS + 'x'] : ['N', 'S', 'E', 'W'];
+  ctx.font = `700 15px ${SERIF}`; ctx.fillStyle = C.ink;
+  ctx.textBaseline = 'top'; ctx.textAlign = 'left'; halo(ctx, L[0], X0 + 7, r.y + 6);
+  ctx.textBaseline = 'bottom'; halo(ctx, L[1], X0 + 7, r.y + r.h - 5);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; halo(ctx, L[2], r.x + r.w - 7, Y0 - 5);
+  ctx.textAlign = 'left'; halo(ctx, L[3], r.x + 7, Y0 - 5);
+  ctx.restore();
+}
+function halo(ctx, t, x, y) {
+  ctx.save(); ctx.lineWidth = 4; ctx.strokeStyle = C.halo; ctx.lineJoin = 'round'; ctx.strokeText(t, x, y); ctx.restore();
+  ctx.fillText(t, x, y);
+}
+/* rich label: parts = [['R','i'],['x','sub'],' = 4.91 m'] */
+function rich(ctx, parts, x, y, color, size = 15, align = 'left', bold = true) {
+  const segs = parts.map(p => typeof p === 'string' ? { t: p, s: '' } : { t: p[0], s: p[1] });
+  const font = s => `${s.includes('i') && !s.includes('sub') ? 'italic ' : ''}${bold ? '700 ' : ''}${s.includes('sub') ? Math.round(size * 0.72) : size}px ${SERIF}`;
+  let w = 0; segs.forEach(g => { ctx.font = font(g.s); g.w = ctx.measureText(g.t).width; w += g.w; });
+  let x0 = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+  ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  for (const pass of [0, 1]) {
+    let xx = x0;
+    for (const g of segs) {
+      ctx.font = font(g.s);
+      const yy = y + (g.s.includes('sub') ? size * 0.3 : 0);
+      if (pass === 0) { ctx.lineWidth = 4.5; ctx.strokeStyle = C.halo; ctx.lineJoin = 'round'; ctx.strokeText(g.t, xx, yy); }
+      else { ctx.fillStyle = color; ctx.fillText(g.t, xx, yy); }
+      xx += g.w;
+    }
+  }
+  ctx.restore();
+  return w;
+}
+function arrow(ctx, x1, y1, x2, y2, color, w = 3, dash = null, head = 13) {
+  const a = Math.atan2(y2 - y1, x2 - x1), L = Math.hypot(x2 - x1, y2 - y1);
+  if (L < 2) return;
+  const hl = Math.min(head, L * 0.5);
+  ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w; ctx.lineCap = 'round';
+  if (dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2 - Math.cos(a) * hl * 0.75, y2 - Math.sin(a) * hl * 0.75); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - hl * Math.cos(a - 0.42), y2 - hl * Math.sin(a - 0.42));
+  ctx.lineTo(x2 - hl * Math.cos(a + 0.42), y2 - hl * Math.sin(a + 0.42));
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+/* arc in world angles (degrees, CCW from +x) from a1 to a2 */
+function arcW(ctx, X, Y, r, a1, a2, color, w = 2, dash = null) {
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = w; if (dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.arc(X, Y, r, -a1 * D, -a2 * D, a2 > a1); ctx.stroke(); ctx.restore();
+}
+function rightMark(ctx, X, Y, dx, dy, color) { // corner at (X,Y), legs along unit screen dirs dx and dy
+  const s = 9; ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(X + dx[0] * s, Y + dx[1] * s); ctx.lineTo(X + dx[0] * s + dy[0] * s, Y + dx[1] * s + dy[1] * s); ctx.lineTo(X + dy[0] * s, Y + dy[1] * s); ctx.stroke(); ctx.restore();
+}
+function dot(ctx, X, Y, r, color) { ctx.save(); ctx.fillStyle = color; ctx.beginPath(); ctx.arc(X, Y, r, 0, 2 * Math.PI); ctx.fill(); ctx.restore(); }
+function fillBg(ctx, w, h) { ctx.fillStyle = C.sky; ctx.fillRect(0, 0, w, h); }
+function centerText(ctx, t, x, y, color, size = 16) { ctx.save(); ctx.font = `${size}px ${SERIF}`; ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; halo(ctx, t, x, y); ctx.restore(); }
+/* screen offset (px) for a label beside a vector at angle phi, on the side away from world point (ax, ay) */
+function sideOff(phi, ax, ay, k = 22) {
+  let nx = -Math.sin(phi * D), ny = Math.cos(phi * D);
+  if (nx * ax + ny * ay > 0) { nx = -nx; ny = -ny; }
+  return [k * nx, -k * ny];
+}
+function compLabelParts(sym, sub, val) { return [[sym, 'i'], [sub, 'sub'], ' = ' + val]; }
+
+/* ---------- honors + tabs ---------- */
+let honors = store.get('vectorlab-honors') === '1';
+function applyHonors() {
+  document.body.classList.toggle('honors', honors);
+  $('#honors').setAttribute('aria-pressed', String(honors));
+}
+applyHonors();
+$('#honors').addEventListener('click', () => {
+  honors = !honors; store.set('vectorlab-honors', honors ? '1' : '0'); applyHonors();
+  if (!honors) $('#ml-mode').value = 'result';
+  rsNew(); cpNew(); mlNew();
+});
+const TABS = { ex: 'tab-ex', rs: 'tab-rs', cp: 'tab-cp', ml: 'tab-ml' };
+function showTab(k) {
+  Object.keys(TABS).forEach(t => { $('#' + t).hidden = t !== k; $('#' + TABS[t]).setAttribute('aria-selected', String(t === k)); });
+  $('#try-open').hidden = k !== 'ex';
+  if (k !== 'ex') closeDrawer();
+  store.set('vectorlab-tab', k);
+  requestAnimationFrame(() => redrawers.forEach(r => r.redraw()));
+}
+Object.keys(TABS).forEach(k => $('#' + TABS[k]).addEventListener('click', () => showTab(k)));
+
+/* ======================= EXPLORE: DRAG A VECTOR ======================= */
+const ex = { x: 6 * Math.cos(35 * D), y: 6 * Math.sin(35 * D), ref: 'E', view: 'drag' };
+let exView = null;
+const exCv = $('#ex-cv');
+const exC = setupCanvas(exCv, (ctx, w, h) => ex.view === 'drag' ? drawExplore(ctx, w, h) : drawWords(ctx, w, h));
+function exState() {
+  const R = Math.hypot(ex.x, ex.y), phi = mod(Math.atan2(ex.y, ex.x) / D);
+  const ra = AX[ex.ref], d = mod(phi - ra + 180) - 180;
+  return { R, phi, ra, d, th: Math.abs(d) };
+}
+function drawExplore(ctx, w, h) {
+  fillBg(ctx, w, h);
+  const v = makeView({ x: 0, y: 0, w, h }, { x0: -10.4, x1: 10.4, y0: -10.4, y1: 10.4 }, 14);
+  exView = v;
+  drawGrid(ctx, v, 1, 2);
+  drawAxes(ctx, v, 'compass');
+  const hide = $('#ex-hide').checked;
+  const { R, phi, ra, d, th } = exState();
+  const X0 = v.X(0), Y0 = v.Y(0), Xt = v.X(ex.x), Yt = v.Y(ex.y);
+  // reference half-axis
+  ctx.save(); ctx.strokeStyle = C.accent; ctx.globalAlpha = 0.5; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(v.X(10.2 * Math.cos(ra * D)), v.Y(10.2 * Math.sin(ra * D))); ctx.stroke(); ctx.restore();
+  if ($('#ex-comp').checked) {
+    if (Math.abs(ex.x) > 0.01) arrow(ctx, X0, Y0, Xt, Y0, C.x, 3);
+    if (Math.abs(ex.y) > 0.01) arrow(ctx, Xt, Y0, Xt, Yt, C.y, 3, [7, 5]);
+    if (Math.abs(ex.x) > 0.3 && Math.abs(ex.y) > 0.3) rightMark(ctx, Xt, Y0, [ex.x > 0 ? -1 : 1, 0], [0, ex.y > 0 ? -1 : 1], C.muted);
+  }
+  arrow(ctx, X0, Y0, Xt, Yt, C.res, 4, null, 16);
+  if ($('#ex-arc').checked && R > 0.3) {
+    const r = Math.max(26, Math.min(64, R * v.s * 0.4));
+    const big = th > 90.0001;
+    arcW(ctx, X0, Y0, r, ra, ra + d, big ? C.bad : C.accent, 2.5, big ? [5, 4] : null);
+    const mid = (ra + d / 2) * D;
+    ctx.save(); ctx.font = `700 15px ${SERIF}`; ctx.fillStyle = big ? C.bad : C.accent; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    halo(ctx, hide ? 'θ' : fmtA(th) + '°', X0 + (r + 20) * Math.cos(mid), Y0 - (r + 16) * Math.sin(mid)); ctx.restore();
+  }
+  ctx.save(); ctx.strokeStyle = C.res; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(Xt, Yt, 10, 0, 2 * Math.PI); ctx.stroke(); ctx.restore();
+  if ($('#ex-comp').checked) {
+    if (Math.abs(ex.x) > 0.6) rich(ctx, compLabelParts('R', 'x', hide ? '?' : sfmt(ex.x) + ' m'), (X0 + Xt) / 2, Y0 + (ex.y >= 0 ? 16 : -14), C.x, 15, 'center');
+    if (Math.abs(ex.y) > 0.6) rich(ctx, compLabelParts('R', 'y', hide ? '?' : sfmt(ex.y) + ' m'), Xt + (ex.x >= 0 ? 10 : -10), (Y0 + Yt) / 2, C.y, 15, ex.x >= 0 ? 'left' : 'right');
+  }
+  if (R > 1) {
+    const o = $('#ex-comp').checked ? sideOff(phi, ex.x, 0, 24) : sideOff(phi, Math.cos(ra * D), Math.sin(ra * D), 24);
+    rich(ctx, [['R', 'i'], ' = ' + (hide ? '?' : fmt(R) + ' m')], (X0 + Xt) / 2 + o[0], (Y0 + Yt) / 2 + o[1], C.res, 16, 'center');
+  }
+}
+let exDrag = false;
+function exPointer(e) {
+  if (!exView || ex.view !== 'drag') return;
+  const r = exCv.getBoundingClientRect();
+  let x = exView.wx(e.clientX - r.left), y = exView.wy(e.clientY - r.top);
+  x = Math.max(-10, Math.min(10, x)); y = Math.max(-10, Math.min(10, y));
+  if ($('#ex-snap').checked) { x = Math.round(x * 2) / 2; y = Math.round(y * 2) / 2; }
+  if (Math.hypot(x, y) < 0.4) return;
+  ex.x = x; ex.y = y; exUpdate();
+}
+exCv.addEventListener('pointerdown', e => {
+  if (ex.view === 'words') { dwClick(e); return; }
+  exDrag = true; exCv.setPointerCapture(e.pointerId); exPointer(e);
+});
+exCv.addEventListener('pointermove', e => { if (exDrag) exPointer(e); });
+exCv.addEventListener('pointerup', () => { exDrag = false; });
+exCv.addEventListener('pointercancel', () => { exDrag = false; });
+
+function exUpdate() {
+  const hide = $('#ex-hide').checked;
+  const q = s => hide ? '?' : s;
+  const { R, phi, th } = exState();
+  const ref = ex.ref, horiz = isHoriz(ref);
+  const sx = ex.x < -1e-9 ? MINUS : '', sy = ex.y < -1e-9 ? MINUS : '';
+  const name = $('#ex-name'), alt = $('#ex-alt'), why = $('#ex-why');
+  const eqx = $('#ex-eqx'), eqy = $('#ex-eqy');
+  if (isAxisDir(phi)) {
+    name.textContent = `${q(fmt(R) + ' m')} ${axisWord(phi)}`;
+    alt.textContent = '';
+    why.innerHTML = 'This arrow lies along an axis, so all of it goes into one component and the other component is 0.';
+    eqx.innerHTML = `${V('R', 'x')} = ${q(sfmt(ex.x) + ' m')}`;
+    eqy.innerHTML = `${V('R', 'y')} = ${q(sfmt(ex.y) + ' m')}`;
+  } else if (th > 90.0001) {
+    name.innerHTML = `${q(fmt(R) + ' m')} at ${q(fmtA(th) + '°')} from ${WORD[ref]}`;
+    alt.textContent = '';
+    const n = allNames(phi);
+    why.innerHTML = `That angle is more than 90°, so it can't go in a compass name. Measure from an axis next to the arrow instead: <b>${WORD[n[0].ref]}</b> or <b>${WORD[n[1].ref]}</b>.`;
+    eqx.innerHTML = `${V('R', 'x')} = ${q(sfmt(ex.x) + ' m')}`;
+    eqy.innerHTML = `${V('R', 'y')} = ${q(sfmt(ex.y) + ' m')}`;
+  } else {
+    const turn = horiz ? (ex.y > 0 ? 'N' : 'S') : (ex.x > 0 ? 'E' : 'W');
+    name.textContent = `${q(fmt(R) + ' m')} at ${hide ? '?° ' + turn + ' of ' + ref : dirName(th, turn, ref)}`;
+    alt.textContent = horiz ? `Same as ${hide ? '?°' : fmtA(th) + '°'} ${ex.y > 0 ? 'above' : 'below'} ${WORD[ref === 'E' ? '+x' : '-x']}` : '';
+    const T = hide ? 'θ' : fmtA(th) + '°';
+    why.innerHTML = horiz
+      ? `The angle touches the <b>x-axis</b> (${WORD[ref]}), so ${V('R', 'x')} gets the cosine and ${V('R', 'y')} gets the sine.`
+      : `The angle touches the <b>y-axis</b> (${WORD[ref]}), so ${V('R', 'y')} gets the cosine and ${V('R', 'x')} gets the sine.`;
+    const Rs = hide ? V('R') : fmt(R);
+    eqx.innerHTML = `${V('R', 'x')} = ${sx}${Rs} ${horiz ? 'cos' : 'sin'} ${T} = ${q(sfmt(ex.x) + ' m')}`;
+    eqy.innerHTML = `${V('R', 'y')} = ${sy}${Rs} ${horiz ? 'sin' : 'cos'} ${T} = ${q(sfmt(ex.y) + ' m')}`;
+  }
+  $('#ex-eqr').innerHTML = `${V('R')} = √(${V('R', 'x')}<sup>2</sup> + ${V('R', 'y')}<sup>2</sup>) = ${hide ? '?' : `√((${fmt(ex.x)})<sup>2</sup> + (${fmt(ex.y)})<sup>2</sup>) = ${fmt(R)} m`}`;
+  if (isAxisDir(phi) || th > 90.0001) {
+    $('#ex-eqt').innerHTML = '';
+  } else if (horiz) {
+    $('#ex-eqt').innerHTML = `θ = tan<sup>−1</sup>(|${V('R', 'y')}| / |${V('R', 'x')}|) = ${hide ? '?' : `tan<sup>−1</sup>(${fmt(Math.abs(ex.y))} / ${fmt(Math.abs(ex.x))}) = ${fmtA(th)}°`}`;
+  } else {
+    $('#ex-eqt').innerHTML = `θ = tan<sup>−1</sup>(|${V('R', 'x')}| / |${V('R', 'y')}|) = ${hide ? '?' : `tan<sup>−1</sup>(${fmt(Math.abs(ex.x))} / ${fmt(Math.abs(ex.y))}) = ${fmtA(th)}°`}`;
+  }
+  const ul = $('#ex-names');
+  if (isAxisDir(phi)) ul.innerHTML = `<li>${axisWord(phi)}</li>`;
+  else ul.innerHTML = allNames(phi).map(n => `<li class="${n.ref === ref || (n.ref === '+x' && ref === 'E') || (n.ref === '-x' && ref === 'W') ? 'on' : ''}">${hide ? dirName('?', n.turn, n.ref) : dirName(n.th, n.turn, n.ref)}</li>`).join('');
+  exC.redraw();
+}
+$$('#ex-ref .btn').forEach(b => b.addEventListener('click', () => {
+  ex.ref = b.dataset.ref; $$('#ex-ref .btn').forEach(o => o.setAttribute('aria-pressed', String(o === b))); exUpdate();
+}));
+['#ex-comp', '#ex-arc', '#ex-hide', '#ex-snap'].forEach(s => $(s).addEventListener('change', exUpdate));
+const exDir = dirBuilder($('#ex-tdir'), 'ex-td');
+exDir.set('30', 'E', 'N');
+$('#ex-tgo').addEventListener('click', () => {
+  const R = num($('#ex-tR').value), d = exDir.get();
+  const msg = $('#ex-tmsg');
+  if (!(R > 0) || R > 10) { msg.textContent = 'Use a magnitude from 0.5 to 10 m so it fits.'; return; }
+  if (!isFinite(d.th) || d.th < 0 || d.th > 90 || !d.turn || !d.ref) { msg.textContent = 'Give an angle from 0° to 90° and both direction words.'; return; }
+  const phi = phiOf(d.th, d.turn, d.ref);
+  ex.x = R * Math.cos(phi * D); ex.y = R * Math.sin(phi * D);
+  if (Math.abs(ex.x) < 1e-9) ex.x = 0; if (Math.abs(ex.y) < 1e-9) ex.y = 0;
+  const r = isHoriz(d.ref) ? (d.ref === '+x' ? 'E' : d.ref === '-x' ? 'W' : d.ref) : d.ref;
+  ex.ref = r; $$('#ex-ref .btn').forEach(o => o.setAttribute('aria-pressed', String(o.dataset.ref === r)));
+  $('#ex-snap').checked = false;
+  msg.textContent = 'Drawn. Snap is off so the arrow stays exact.';
+  exUpdate();
+});
+
+/* ======================= EXPLORE: DIRECTION WORDS ======================= */
+const dw = { pair: 'NE', th: 30, t: 1, mode: 'learn', anim: 0, quiz: null, streak: 0, done: 0 };
+function setExView(vw) {
+  ex.view = vw;
+  $('#exv-drag').setAttribute('aria-pressed', String(vw === 'drag'));
+  $('#exv-words').setAttribute('aria-pressed', String(vw === 'words'));
+  $('#ex-p-drag').hidden = vw !== 'drag';
+  $('#ex-p-words').hidden = vw !== 'words';
+  $('#ex-foot').hidden = vw !== 'drag';
+  $('#ex-tip').textContent = vw === 'drag' ? 'Drag anywhere on the grid to move the tip of the arrow.' : (dw.mode === 'learn' ? 'Press Play to watch each arrow start on the word after “of”, then turn.' : 'Answer on the compass or with the dropdowns.');
+  exUpdate(); if (vw === 'words') dwUpdate();
+}
+$('#exv-drag').addEventListener('click', () => setExView('drag'));
+$('#exv-words').addEventListener('click', () => setExView('words'));
+const PAIRS = { NE: ['N', 'E'], NW: ['N', 'W'], SE: ['S', 'E'], SW: ['S', 'W'] };
+function dwPairs() { const [ns, ew] = PAIRS[dw.pair]; return [{ turn: ns, ref: ew }, { turn: ew, ref: ns }]; }
+function drawCompass(ctx, cx, cy, r, ticks = true) {
+  ctx.save();
+  ctx.fillStyle = C.surface; ctx.strokeStyle = C.line; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = C.axis; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r); ctx.stroke();
+  if (ticks) {
+    ctx.strokeStyle = C.muted; ctx.lineWidth = 1;
+    for (let a = 0; a < 360; a += 10) {
+      const L = a % 90 === 0 ? 0 : a % 30 === 0 ? 9 : 5;
+      if (!L) continue;
+      ctx.beginPath(); ctx.moveTo(cx + r * Math.cos(a * D), cy - r * Math.sin(a * D)); ctx.lineTo(cx + (r - L) * Math.cos(a * D), cy - (r - L) * Math.sin(a * D)); ctx.stroke();
+    }
+  }
+  ctx.font = `700 15px ${SERIF}`; ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('N', cx, cy - r - 11); ctx.fillText('S', cx, cy + r + 12); ctx.fillText('E', cx + r + 12, cy); ctx.fillText('W', cx - r - 13, cy);
+  ctx.restore();
+}
+function drawWords(ctx, w, h) {
+  fillBg(ctx, w, h);
+  if (dw.mode === 'quiz') return drawQuiz(ctx, w, h);
+  const P = dwPairs();
+  const topH = h * 0.6;
+  const r = Math.max(40, Math.min(topH * 0.3, w * 0.17));
+  const cxs = [w * 0.27, w * 0.73], cy = topH * 0.55;
+  P.forEach((p, i) => {
+    const cx = cxs[i], ra = AX[p.ref], phi = phiOf(dw.th, p.turn, p.ref), sg = mod(TURN[p.turn] - ra) === 90 ? 1 : -1;
+    const cur = ra + sg * dw.th * dw.t;
+    drawCompass(ctx, cx, cy, r);
+    // start direction
+    ctx.save(); ctx.strokeStyle = C.accent; ctx.globalAlpha = 0.55; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r * Math.cos(ra * D), cy - r * Math.sin(ra * D)); ctx.stroke(); ctx.restore();
+    if (dw.t > 0.01) {
+      arcW(ctx, cx, cy, r * 0.42, ra, cur, C.accent, 2.5);
+      const mid = (ra + cur) / 2 * D;
+      ctx.save(); ctx.font = `700 14px ${SERIF}`; ctx.fillStyle = C.accent; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      halo(ctx, Math.round(dw.th * dw.t) + '°', cx + r * 0.6 * Math.cos(mid), cy - r * 0.6 * Math.sin(mid)); ctx.restore();
+    }
+    arrow(ctx, cx, cy, cx + r * 0.92 * Math.cos(cur * D), cy - r * 0.92 * Math.sin(cur * D), C.res, 4, null, 15);
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `700 19px ${SERIF}`; ctx.fillStyle = C.ink; ctx.fillText(dirName(dw.th, p.turn, p.ref, 0), cx, Math.max(14, cy - r - 36));
+    ctx.font = `14px ${SERIF}`; ctx.fillStyle = C.muted;
+    ctx.fillText(`face ${WORD[p.ref]}, turn ${dw.th}° toward ${WORD[p.turn]}`, cx, cy + r + 34);
+    ctx.restore();
+    void phi;
+  });
+  // hike map
+  ctx.save(); ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(16, topH + 4); ctx.lineTo(w - 16, topH + 4); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.font = `700 15px ${SERIF}`; ctx.fillStyle = C.ink; ctx.textBaseline = 'top'; ctx.fillText('Why it matters: Mr. Jantz hikes 10.0 km in each direction', 18, topH + 12); ctx.restore();
+  const ends = P.map(p => { const f = phiOf(dw.th, p.turn, p.ref); return { x: 10 * Math.cos(f * D), y: 10 * Math.sin(f * D), name: dirName(dw.th, p.turn, p.ref, 0) }; });
+  const xs = [0, ...ends.map(e => e.x)], ys = [0, ...ends.map(e => e.y)];
+  const b = { x0: Math.min(...xs) - 1.5, x1: Math.max(...xs) + 1.5, y0: Math.min(...ys) - 1.2, y1: Math.max(...ys) + 1.2 };
+  const rect = { x: 16, y: topH + 34, w: w - 32, h: h - topH - 40 };
+  if (rect.h > 40) {
+    const v = makeView(rect, b, 10);
+    ctx.save(); ctx.beginPath(); ctx.rect(rect.x, rect.y, rect.w, rect.h); ctx.clip();
+    drawGrid(ctx, v, niceStep(v.s, 18), 0);
+    ctx.strokeStyle = C.axis; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(rect.x, v.Y(0)); ctx.lineTo(rect.x + rect.w, v.Y(0)); ctx.moveTo(v.X(0), rect.y); ctx.lineTo(v.X(0), rect.y + rect.h); ctx.stroke();
+    ctx.restore();
+    ends.forEach((e, i) => arrow(ctx, v.X(0), v.Y(0), v.X(e.x), v.Y(e.y), i ? C.x : C.y, 3, i ? [8, 5] : null));
+    ctx.save(); ctx.strokeStyle = C.accent; ctx.setLineDash([3, 4]); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(v.X(ends[0].x), v.Y(ends[0].y)); ctx.lineTo(v.X(ends[1].x), v.Y(ends[1].y)); ctx.stroke(); ctx.restore();
+    dot(ctx, v.X(0), v.Y(0), 5, C.good);
+    ends.forEach((e, i) => { dot(ctx, v.X(e.x), v.Y(e.y), 5, i ? C.x : C.y); });
+    ends.forEach((e, i) => {
+      const Xe = v.X(e.x), Ye = v.Y(e.y), right = Xe > v.X(0) + 5 || (Xe >= v.X(0) - 5 && i === 0);
+      rich(ctx, [e.name], Xe + (right ? 9 : -9), Ye + (i ? -10 : 10), i ? C.x : C.y, 14, right ? 'left' : 'right');
+    });
+    const apart = Math.hypot(ends[0].x - ends[1].x, ends[0].y - ends[1].y);
+    if (apart > 0.05) rich(ctx, [fmt(apart) + ' km apart'], (v.X(ends[0].x) + v.X(ends[1].x)) / 2 + 10, (v.Y(ends[0].y) + v.Y(ends[1].y)) / 2, C.accent, 14, 'left');
+    rich(ctx, ['Start'], v.X(0) + 8, v.Y(0) + 12, C.good, 13, 'left');
+  }
+}
+function dwUpdate() {
+  const P = dwPairs();
+  $('#dw-tho').textContent = dw.th + '°';
+  const rows = P.map((p, i) => {
+    const f = phiOf(dw.th, p.turn, p.ref), x = 10 * Math.cos(f * D), y = 10 * Math.sin(f * D);
+    const horiz = isHoriz(p.ref);
+    return `<tr><td><span class="sw ${i ? 'x' : 'y'}"></span>${dirName(dw.th, p.turn, p.ref, 0)}</td><td class="xc">${sfmt(x)} km<br><span class="muted">10.0 ${horiz ? 'cos' : 'sin'} ${dw.th}°</span></td><td class="yc">${sfmt(y)} km<br><span class="muted">10.0 ${horiz ? 'sin' : 'cos'} ${dw.th}°</span></td></tr>`;
+  });
+  $('#dw-tbl tbody').innerHTML = rows.join('');
+  const e = P.map(p => phiOf(dw.th, p.turn, p.ref));
+  const apart = 20 * Math.abs(Math.sin((e[0] - e[1]) / 2 * D));
+  const a0 = dirName(dw.th, P[0].turn, P[0].ref, 0), a1 = dirName(dw.th, P[1].turn, P[1].ref, 0);
+  $('#dw-apart').innerHTML = dw.th === 45
+    ? `At 45° the two names point the same way, so the hikes end at the same spot. At every other angle they don't.`
+    : `Same 10.0 km and the same ${dw.th}°, but the components trade places, so the hikes end <b>${fmt(apart)} km apart</b>. ${a0} is the same as ${dirName(90 - dw.th, P[1].turn, P[1].ref, 0)}.`;
+  void a1;
+  const [ns, ew] = PAIRS[dw.pair];
+  $('#dw-axis').innerHTML = `${dw.th}° ${ns} of ${ew} is the same as ${dw.th}° ${ns === 'N' ? 'above' : 'below'} ${WORD[ew === 'E' ? '+x' : '-x']}.`;
+  if (ex.view === 'words') exC.redraw();
+}
+$('#dw-pair').addEventListener('change', e => { dw.pair = e.target.value; dw.t = 1; dwUpdate(); });
+$('#dw-th').addEventListener('input', e => { dw.th = Number(e.target.value); dw.t = 1; dwUpdate(); });
+$('#dw-play').addEventListener('click', () => {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce) { dw.t = 1; dwUpdate(); return; }
+  cancelAnimationFrame(dw.anim);
+  const t0 = performance.now(), hold = 600, dur = 1400;
+  const step = now => {
+    const e = now - t0;
+    dw.t = e < hold ? 0 : Math.min(1, (e - hold) / dur);
+    exC.redraw();
+    if (e < hold + dur) dw.anim = requestAnimationFrame(step);
+  };
+  dw.anim = requestAnimationFrame(step);
+});
+function setDwMode(m) {
+  dw.mode = m;
+  $('#dw-learn').setAttribute('aria-pressed', String(m === 'learn'));
+  $('#dw-quiz').setAttribute('aria-pressed', String(m === 'quiz'));
+  $('#dw-learnp').hidden = m !== 'learn'; $('#dw-quizp').hidden = m !== 'quiz';
+  if (m === 'quiz' && !dw.quiz) dwNext();
+  setExView('words');
+}
+$('#dw-learn').addEventListener('click', () => setDwMode('learn'));
+$('#dw-quiz').addEventListener('click', () => setDwMode('quiz'));
+const dwDir = dirBuilder($('#dw-dir'), 'dw-d');
+function dwNext() {
+  const type = Math.random() < 0.5 ? 'click' : 'name';
+  let q;
+  if (type === 'click') {
+    const ref = pick(['E', 'W', 'N', 'S']);
+    const turn = isHoriz(ref) ? pick(['N', 'S']) : pick(['E', 'W']);
+    const th = pick([10, 15, 20, 25, 30, 35, 40, 50, 55, 60, 65, 70, 75, 80]);
+    q = { type, ref, turn, th, phi: phiOf(th, turn, ref), click: null, done: false };
+    $('#dw-prompt').innerHTML = `Click the compass where <b>${dirName(th, turn, ref, 0)}</b> points.`;
+  } else {
+    let phi; do { phi = rint(1, 35) * 10; } while (phi % 90 === 0);
+    q = { type, phi, done: false };
+    $('#dw-prompt').innerHTML = 'Name the direction of this arrow. The tick marks are every 10°.';
+    dwDir.clear();
+  }
+  dw.quiz = q;
+  $('#dw-namebox').hidden = type !== 'name';
+  $('#dw-fb').textContent = ''; $('#dw-fb').className = 'fb';
+  dwScore(); exC.redraw();
+}
+function dwScore() { $('#dw-score').textContent = `Streak ${dw.streak} · Correct ${dw.done}`; }
+let quizGeo = null;
+function drawQuiz(ctx, w, h) {
+  const r = Math.min(w, h) * 0.36, cx = w / 2, cy = h / 2 + 6;
+  quizGeo = { cx, cy, r };
+  drawCompass(ctx, cx, cy, r);
+  const q = dw.quiz; if (!q) return;
+  const tip = (phi, k = 0.92) => [cx + r * k * Math.cos(phi * D), cy - r * k * Math.sin(phi * D)];
+  if (q.type === 'name') {
+    const [X, Y] = tip(q.phi);
+    arrow(ctx, cx, cy, X, Y, q.done ? (q.ok ? C.good : C.res) : C.res, 4.5, null, 17);
+    if (q.done) {
+      const n = allNames(q.phi)[0];
+      arcW(ctx, cx, cy, r * 0.35, AX[n.ref], q.phi, C.accent, 2.5);
+    }
+  } else {
+    if (q.click != null) {
+      const [X, Y] = tip(q.click);
+      arrow(ctx, cx, cy, X, Y, q.ok ? C.good : C.bad, 4, q.ok ? null : [7, 5], 16);
+      if (!q.ok) {
+        const [X2, Y2] = tip(q.phi);
+        arrow(ctx, cx, cy, X2, Y2, C.res, 4.5, null, 17);
+        arcW(ctx, cx, cy, r * 0.35, AX[q.ref], q.phi, C.accent, 2.5);
+      }
+    }
+    ctx.save(); ctx.strokeStyle = C.accent; ctx.globalAlpha = q.click != null ? 0.55 : 0; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r * Math.cos(AX[q.ref] * D), cy - r * Math.sin(AX[q.ref] * D)); ctx.stroke(); ctx.restore();
+  }
+}
+function dwClick(e) {
+  if (dw.mode !== 'quiz' || !dw.quiz || dw.quiz.type !== 'click' || dw.quiz.done || !quizGeo) return;
+  const rect = exCv.getBoundingClientRect();
+  const x = e.clientX - rect.left - quizGeo.cx, y = -(e.clientY - rect.top - quizGeo.cy);
+  if (Math.hypot(x, y) < 12) return;
+  const a = mod(Math.atan2(y, x) / D), q = dw.quiz;
+  const err = Math.abs(mod(a - q.phi + 180) - 180);
+  q.click = a; q.ok = err <= 6; q.done = true;
+  const fb = $('#dw-fb');
+  const n = allNames(q.phi);
+  const other = n.find(o => o.ref !== q.ref && !(o.ref === '+x' || o.ref === '-x'));
+  if (q.ok) { dw.streak++; dw.done++; fb.className = 'fb ok'; fb.innerHTML = `Yes. Start facing ${WORD[q.ref]}, then turn ${q.th}° toward ${WORD[q.turn]}. The same arrow is also ${dirName(other.th, other.turn, other.ref, 0)}.`; }
+  else { dw.streak = 0; fb.className = 'fb no'; fb.innerHTML = `Not quite. Start facing <b>${WORD[q.ref]}</b> (the word after “of”), then turn ${q.th}° toward ${WORD[q.turn]}. The navy arrow shows it.`; }
+  dwScore(); exC.redraw();
+}
+$('#dw-check').addEventListener('click', () => {
+  const q = dw.quiz; if (!q || q.type !== 'name' || q.done) return;
+  const d = dwDir.get();
+  const res = checkDir(q.phi, { ...d, th: d.th });
+  const fb = $('#dw-fb');
+  // the compass is read to the nearest tick, so allow 2°
+  const tt = d.turn && d.ref ? thetaIn(q.phi, d.turn, d.ref) : null;
+  const ok = res.ok || (tt != null && tt <= 90 && Math.abs(d.th - tt) <= 2);
+  if (ok) {
+    q.done = true; q.ok = true; dw.streak++; dw.done++; dwDir.mark('good');
+    const names = allNames(q.phi).map(n => dirName(n.th, n.turn, n.ref, 0));
+    fb.className = 'fb ok'; fb.innerHTML = `Yes. Every name for this arrow: ${names.join(' · ')}.`;
+  } else {
+    dw.streak = 0; dwDir.mark('bad');
+    fb.className = 'fb no'; fb.textContent = res.msg.replace('use tan⁻¹ with the sizes of the two components (no signs), then name the axis it touches', 'count the 10° ticks from the axis you named');
+  }
+  dwScore(); exC.redraw();
+});
+$('#dw-next').addEventListener('click', dwNext);
+
+/* ======================= TRY THIS ======================= */
+const PROMPTS = [
+  ['Equal components', `Drag the tip until ${V('R', 'x')} = ${V('R', 'y')}.`, 'What is the angle from east? Does it change if the arrow is longer?'],
+  ['Biggest x component', 'Keep the arrow about 8 m long and swing it around the origin.', `When is ${V('R', 'x')} as big as it can be? When is it 0?`],
+  ['Switch the reference', 'Make any arrow in the first quadrant, then press East and North in turn.', 'Which component gets the cosine each time? Why do they trade places?'],
+  ['Same angle, different words', 'Type 10.0 m at 30° N of E and draw it. Then type 10.0 m at 30° E of N.', 'Which numbers swapped? How far apart are the two tips?'],
+  ['Signs in every quadrant', 'Drag the arrow into each of the four quadrants.', `What signs do ${V('R', 'x')} and ${V('R', 'y')} have in each one? Can ${V('R')} ever be negative?`],
+  ['Two names, one arrow', `Make ${V('R', 'x')} = −6 m and ${V('R', 'y')} = +8 m.`, 'Name the direction two different ways. Which axis does each name start from?'],
+  ['Predict, then check', 'Turn on Hide numbers. Draw 10 m at 60° above the −x-axis.', `Predict ${V('R', 'x')} and ${V('R', 'y')} on paper, then turn Hide numbers off to check.`]
+];
+$('#prompts').innerHTML = PROMPTS.map(p => `<div class="prompt"><h3>${p[0]}</h3><p>${p[1]}</p><p class="q">${p[2]}</p></div>`).join('');
+function closeDrawer() { $('#drawer').hidden = true; $('#try-open').setAttribute('aria-expanded', 'false'); }
+$('#try-open').addEventListener('click', () => {
+  const open = $('#drawer').hidden; $('#drawer').hidden = !open; $('#try-open').setAttribute('aria-expanded', String(open));
+  if (open) { setExView('drag'); }
+});
+$('#try-close').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+/* ======================= PRACTICE: shared ======================= */
+function quadOf(x, y) { return x > 0 ? (y > 0 ? 1 : 4) : (y > 0 ? 2 : 3); }
+function quadRect(v, q, m) {
+  const sx = q === 1 || q === 4 ? 1 : -1, sy = q === 1 || q === 2 ? 1 : -1;
+  const X0 = v.X(0), Y0 = v.Y(0), r = v.rect;
+  return { x: sx > 0 ? X0 : r.x, y: sy > 0 ? r.y : Y0, w: sx > 0 ? r.x + r.w - X0 : X0 - r.x, h: sy > 0 ? Y0 - r.y : r.y + r.h - Y0 };
+}
+function setFb(el, cls, html) { el.className = 'fb' + (cls ? ' ' + cls : ''); el.innerHTML = html || ''; }
+function setMark(el, ok) { el.textContent = ok == null ? '' : ok ? '✓' : '✗'; el.className = 'mark' + (ok == null ? '' : ok ? ' ok' : ' no'); }
+function markInput(el, ok) { el.classList.remove('good', 'bad'); if (ok != null) el.classList.add(ok ? 'good' : 'bad'); }
+
+/* ======================= FIND THE RESULTANT ======================= */
+const WALKERS = [
+  { who: 'Phoebe', poss: 'Phoebe\'s', verb: 'chases a ball', unit: 'm', lo: 3, hi: 15, dec: 1 },
+  { who: 'Ivy', poss: 'Ivy\'s', verb: 'runs', unit: 'm', lo: 3, hi: 20, dec: 1 },
+  { who: 'A hiker', poss: 'the hiker\'s', verb: 'walks', unit: 'km', lo: 1, hi: 9, dec: 1 },
+  { who: 'Mr. Peck', poss: 'Mr. Peck\'s', verb: 'jogs', unit: 'km', lo: 0.5, hi: 4, dec: 1 },
+  { who: 'A delivery robot', poss: 'the robot\'s', verb: 'drives', unit: 'blocks', lo: 1, hi: 9, dec: 0 },
+  { who: 'A geocacher', poss: 'the geocacher\'s', verb: 'walks', unit: 'm', lo: 10, hi: 90, dec: 0 },
+  { who: 'A drone', poss: 'the drone\'s', verb: 'flies', unit: 'm', lo: 10, hi: 80, dec: 0 }
+];
+const VELS = [
+  { t: (x, y) => `Just before Mrs. Luksic catches a softball, its velocity components are ${x} and ${y}.`, sx: [1, -1], sy: [-1], lx: [8, 20], ly: [2, 10] },
+  { t: (x, y) => `A basketball leaves Mr. Vincenzo's hands with velocity components ${x} and ${y}.`, sx: [1, -1], sy: [1], lx: [3, 7], ly: [4, 9] },
+  { t: (x, y) => `At Mr. White's track meet, a long jumper leaves the board with velocity components ${x} and ${y}.`, sx: [1], sy: [1], lx: [7, 10], ly: [2, 4.5] },
+  { t: (x, y) => `An air-hockey puck slides with velocity components ${x} and ${y}.`, sx: [1, -1], sy: [1, -1], lx: [1, 6], ly: [1, 6] },
+  { t: (x, y) => `A drone's velocity has components ${x} and ${y}.`, sx: [1, -1], sy: [1, -1], lx: [2, 12], ly: [2, 12] }
+];
+const FORCES = [
+  { t: (a, b) => `Dr. Shafer pulls a sled with ${a} while a student pulls the same sled with ${b}.` },
+  { t: (a, b) => `Two ropes pull on a crate: one with ${a}, the other with ${b}.` },
+  { t: (a, b) => `Two tugboats push a barge: one with ${a}, the other with ${b}.` }
+];
+const rs = { p: null, phase: 'quad', tries: 0, done: false, streak: 0, solved: 0, hint: 0, hover: 0, est: null, estSide: null };
+const rsDir = dirBuilder($('#rs-dir'), 'rs-d');
+function compassWord(axis, s) { return axis === 'x' ? (s > 0 ? 'east' : 'west') : (s > 0 ? 'north' : 'south'); }
+function rsGen() {
+  const types = [];
+  if ($('#rs-tw').checked) types.push('walk');
+  if ($('#rs-tv').checked) types.push('vel');
+  if ($('#rs-tf').checked) types.push('force');
+  const kind = pick(types.length ? types : ['walk', 'vel', 'force']);
+  const sx = pick([1, -1]), sy = pick([1, -1]);
+  if (kind === 'walk') {
+    const c = pick(WALKERS);
+    let a, b; do { a = rnd(c.lo, c.hi, c.dec); b = rnd(c.lo, c.hi, c.dec); } while (a <= 0 || b <= 0 || Math.abs(a - b) < 0.05 * c.hi || Math.min(a, b) < 0.3 * Math.max(a, b));
+    const lx = { x: sx * a, y: 0, mag: a, word: compassWord('x', sx) }, ly = { x: 0, y: sy * b, mag: b, word: compassWord('y', sy) };
+    const legs = Math.random() < 0.5 ? [lx, ly] : [ly, lx];
+    legs.forEach(l => l.label = `${giv(l.mag, c.dec)} ${c.unit} ${l.word}`);
+    return { kind, sym: 'R', unit: c.unit, x: lx.x, y: ly.y, legs, labels: 'compass', what: 'displacement',
+      text: `${c.who} ${c.verb} ${legs[0].label}, then ${legs[1].label}. Find the magnitude and direction of ${c.poss} displacement.` };
+  }
+  if (kind === 'vel') {
+    const c = pick(VELS);
+    const x = pick(c.sx) * rnd(c.lx[0], c.lx[1], 1), y = pick(c.sy) * rnd(c.ly[0], c.ly[1], 1);
+    const xs = `${V('v', 'x')} = ${sgiv(x, 1)} m/s`, ys = `${V('v', 'y')} = ${sgiv(y, 1)} m/s`;
+    const legs = [{ x, y: 0, label: `vx = ${sgiv(x, 1)} m/s`, parts: compLabelParts('v', 'x', sgiv(x, 1) + ' m/s') }, { x: 0, y, parts: compLabelParts('v', 'y', sgiv(y, 1) + ' m/s') }];
+    return { kind, sym: 'v', unit: 'm/s', x, y, legs, labels: 'xy', what: 'velocity',
+      text: c.t(xs, ys) + ' Find the speed and the direction of the velocity.' };
+  }
+  const c = pick(FORCES);
+  let a, b; do { a = rint(4, 60) * 10; b = rint(4, 60) * 10; } while (a === b || Math.min(a, b) < 0.3 * Math.max(a, b));
+  const lx = { x: sx * a, y: 0, mag: a, word: compassWord('x', sx) }, ly = { x: 0, y: sy * b, mag: b, word: compassWord('y', sy) };
+  const legs = Math.random() < 0.5 ? [lx, ly] : [ly, lx];
+  legs.forEach(l => l.label = `${l.mag} N ${l.word}`);
+  return { kind, sym: 'F', unit: 'N', x: lx.x, y: ly.y, legs, labels: 'compass', what: 'net force',
+    text: c.t(legs[0].label, legs[1].label) + ' Find the magnitude and direction of the net force.' };
+}
+function rsNew() {
+  const p = rsGen(); rs.p = p;
+  p.R = Math.hypot(p.x, p.y); p.phi = mod(Math.atan2(p.y, p.x) / D);
+  rs.phase = 'quad'; rs.tries = 0; rs.done = false; rs.hint = 0; rs.hover = 0; rs.est = null; rs.estSide = null; rs.qwrong = 0;
+  $('#rs-q').innerHTML = `<span class="lbl">Problem</span>${p.text}`;
+  $('#rs-s1').innerHTML = `Click the quadrant where the ${p.what} points.`;
+  $$('.rs-u').forEach(e => e.textContent = p.unit);
+  $('#rs-esym').innerHTML = V(p.sym);
+  $('#rs-msym').innerHTML = p.kind === 'vel' ? 'speed, ' + V('v') : V(p.sym);
+  $('#rs-R').value = ''; markInput($('#rs-R'), null); rsDir.clear();
+  $('#rs-eR').value = ''; $('#rs-elt').setAttribute('aria-pressed', 'false'); $('#rs-egt').setAttribute('aria-pressed', 'false');
+  $('#rs-estf').disabled = true; setFb($('#rs-efb'), '', '');
+  $('#rs-f').disabled = true; $('#rs-show').disabled = true;
+  setMark($('#rs-mR'), null); setMark($('#rs-mD'), null);
+  setFb($('#rs-fb'), '', ''); $('#rs-sol').hidden = true;
+  $('#rs-foot').innerHTML = '';
+  rsScore(); rsC.redraw();
+}
+function rsScore() { $('#rs-score').textContent = `Streak ${rs.streak} · Solved ${rs.solved}`; }
+let rsView = null;
+const rsCv = $('#rs-cv');
+const rsC = setupCanvas(rsCv, (ctx, w, h) => {
+  fillBg(ctx, w, h);
+  const p = rs.p; if (!p) return;
+  const m = Math.max(Math.abs(p.x), Math.abs(p.y)) * 1.22;
+  const v = makeView({ x: 0, y: 0, w, h }, { x0: -m, x1: m, y0: -m, y1: m }, 12);
+  rsView = v;
+  const tq = quadOf(p.x, p.y);
+  if (rs.phase === 'quad' && rs.hover) { const q = quadRect(v, rs.hover, m); ctx.fillStyle = C.hover; ctx.fillRect(q.x, q.y, q.w, q.h); }
+  if (rs.phase !== 'quad') { const q = quadRect(v, tq, m); ctx.fillStyle = C.pick; ctx.fillRect(q.x, q.y, q.w, q.h); }
+  const step = niceStep(v.s, 24);
+  drawGrid(ctx, v, step, 0);
+  drawAxes(ctx, v, p.labels);
+  $('#rs-foot').innerHTML = `Grid squares are ${step} ${p.unit}`;
+  if (rs.phase === 'quad') { centerText(ctx, 'Click the quadrant where the ' + p.what + ' points', w * 0.25, 22, C.muted, 15); return; }
+  // legs tip to tail
+  let px = 0, py = 0;
+  p.legs.forEach(l => {
+    const nx = px + l.x, ny = py + l.y;
+    const col = Math.abs(l.x) > 0 ? C.x : C.y;
+    arrow(ctx, v.X(px), v.Y(py), v.X(nx), v.Y(ny), col, 3.5);
+    const mx = (v.X(px) + v.X(nx)) / 2, my = (v.Y(py) + v.Y(ny)) / 2;
+    const parts = l.parts || [l.label];
+    if (Math.abs(l.x) > 0) rich(ctx, parts, mx, my + (p.y > 0 === (py === 0) ? 16 : -16), col, 15, 'center');
+    else rich(ctx, parts, mx + ((px > 0) ? 10 : -10), my, col, 15, px > 0 ? 'left' : 'right');
+    px = nx; py = ny;
+  });
+  const solved = rs.done;
+  arrow(ctx, v.X(0), v.Y(0), v.X(p.x), v.Y(p.y), C.res, 4, solved ? null : [9, 6], 16);
+  const o = sideOff(p.phi, p.legs[0].x, p.legs[0].y, 24);
+  rich(ctx, [[p.sym, 'i'], ' = ' + (solved ? fmt(p.R) + ' ' + p.unit : '?')], (v.X(0) + v.X(p.x)) / 2 + o[0], (v.Y(0) + v.Y(p.y)) / 2 + o[1], C.res, 16, 'center');
+  if (solved) {
+    const n = allNames(p.phi)[0];
+    const r = Math.min(60, Math.max(28, p.R * v.s * 0.3));
+    const ra = AX[n.ref], a2 = ra + mod(p.phi - ra + 180) - 180;
+    arcW(ctx, v.X(0), v.Y(0), r, ra, a2, C.accent, 2.5);
+    const mid = (ra + a2) / 2 * D;
+    ctx.save(); ctx.font = `700 14px ${SERIF}`; ctx.fillStyle = C.accent; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    halo(ctx, fmtA(n.th) + '°', v.X(0) + (r + 20) * Math.cos(mid), v.Y(0) - (r + 14) * Math.sin(mid)); ctx.restore();
+  }
+});
+rsCv.addEventListener('pointermove', e => {
+  if (rs.phase !== 'quad' || !rsView) return;
+  const r = rsCv.getBoundingClientRect(); const x = rsView.wx(e.clientX - r.left), y = rsView.wy(e.clientY - r.top);
+  const q = quadOf(x || 1e-9, y || 1e-9); if (q !== rs.hover) { rs.hover = q; rsC.redraw(); }
+});
+rsCv.addEventListener('pointerleave', () => { if (rs.hover) { rs.hover = 0; rsC.redraw(); } });
+rsCv.addEventListener('pointerdown', e => {
+  if (rs.phase !== 'quad' || !rsView) return;
+  const r = rsCv.getBoundingClientRect(); const x = rsView.wx(e.clientX - r.left), y = rsView.wy(e.clientY - r.top);
+  const p = rs.p, q = quadOf(x || 1e-9, y || 1e-9), tq = quadOf(p.x, p.y);
+  if (q === tq) {
+    rs.phase = honors ? 'est' : 'calc';
+    $('#rs-s1').innerHTML = `<span class="mark ok">✓</span> ${quadWords(p.phi).replace(/^./, ch => ch.toUpperCase())}. The two parts are drawn tip-to-tail; the dashed arrow is the ${p.what}.`;
+    if (honors) { $('#rs-estf').disabled = false; } else { $('#rs-f').disabled = false; }
+  } else {
+    rs.qwrong++;
+    const xw = compassWord('x', p.x), yw = compassWord('y', p.y);
+    $('#rs-s1').innerHTML = `<span class="mark no">✗</span> Not that one. The ${p.what} has a part to the <b>${xw}</b> (${p.x > 0 ? 'right' : 'left'}) and a part to the <b>${yw}</b> (${p.y > 0 ? 'up' : 'down'}). Try again.`;
+  }
+  rsC.redraw();
+});
+function rsEstPick(side) { rs.estSide = side; $('#rs-elt').setAttribute('aria-pressed', String(side === 'lt')); $('#rs-egt').setAttribute('aria-pressed', String(side === 'gt')); }
+$('#rs-elt').addEventListener('click', () => rsEstPick('lt'));
+$('#rs-egt').addEventListener('click', () => rsEstPick('gt'));
+$('#rs-elock').addEventListener('click', () => {
+  const e = num($('#rs-eR').value);
+  if (!(e > 0) || !rs.estSide) { setFb($('#rs-efb'), 'info', 'Type a size and pick less or more than 45° before you lock in.'); return; }
+  rs.est = e; rs.phase = 'calc'; $('#rs-estf').disabled = true; $('#rs-f').disabled = false;
+  setFb($('#rs-efb'), 'info', 'Locked in. Now calculate; your estimate is graded at the end.');
+});
+function rsEstReport() {
+  if (rs.est == null) return '';
+  const p = rs.p, off = Math.abs(rs.est - p.R) / p.R * 100, h = allNames(p.phi)[0].th;
+  const sideOk = (h < 45) === (rs.estSide === 'lt');
+  return ` Your estimate: ${fmt(rs.est)} ${p.unit}, ${off < 0.5 ? 'right on' : fmt(off, 2) + '% off'}. Angle from the x-axis ${rs.estSide === 'lt' ? 'less' : 'more'} than 45°: ${sideOk ? 'correct' : 'not this time'} (${fmtA(h)}°).`;
+}
+$('#rs-check').addEventListener('click', () => {
+  if (rs.done) return;
+  const p = rs.p; rs.tries++; $('#rs-show').disabled = false;
+  const m = checkMag(num($('#rs-R').value), p.R, p.x, p.y);
+  const d = checkDir(p.phi, rsDir.get());
+  setMark($('#rs-mR'), m.ok); markInput($('#rs-R'), m.ok);
+  setMark($('#rs-mD'), d.ok); rsDir.mark(d.ok ? 'good' : 'bad');
+  if (m.ok && d.ok) {
+    rs.done = true; rs.solved++; rs.streak++;
+    const others = allNames(p.phi).map(n => dirName(n.th, n.turn, n.ref)).join(' · ');
+    setFb($('#rs-fb'), 'ok', `Correct! Every name for this direction: ${others}.${rsEstReport()}`);
+    $('#rs-f').disabled = true; rsC.redraw();
+  } else {
+    rs.streak = 0;
+    setFb($('#rs-fb'), 'no', [m.ok ? '' : m.msg, d.ok ? '' : d.msg].filter(Boolean).join(' '));
+  }
+  rsScore();
+});
+const RS_HINTS = [
+  'The two parts are perpendicular, so the resultant is the hypotenuse of a right triangle. Look at the sketch.',
+  'Magnitude: square each part, add, then take the square root. Squaring removes the signs.',
+  'Angle: tan⁻¹ of the sizes (no signs). tan⁻¹(|y| / |x|) gives the angle from the x-axis (east–west); tan⁻¹(|x| / |y|) gives the angle from the y-axis.',
+  'Name it: say which axis the angle touches and which way it turns, like “22.6° S of W” or “22.6° below the −x-axis”.'
+];
+$('#rs-hint').addEventListener('click', () => { setFb($('#rs-fb'), 'info', `Hint ${rs.hint + 1} of ${RS_HINTS.length}: ${RS_HINTS[rs.hint]}`); rs.hint = (rs.hint + 1) % RS_HINTS.length; });
+$('#rs-show').addEventListener('click', () => {
+  const p = rs.p, n = allNames(p.phi);
+  const sx = p.kind === 'vel' ? V('v', 'x') : 'x', sy = p.kind === 'vel' ? V('v', 'y') : 'y';
+  void sx; void sy;
+  $('#rs-sol').innerHTML = `
+    <p>${V(p.sym)} = √((${fmt(p.x, 4)})<sup>2</sup> + (${fmt(p.y, 4)})<sup>2</sup>) = <b>${fmt(p.R)} ${p.unit}</b></p>
+    <p>θ = tan<sup>−1</sup>(${fmt(Math.abs(p.y), 4)} / ${fmt(Math.abs(p.x), 4)}) = ${fmtA(n[0].th)}°, measured from the x-axis</p>
+    <p>It points ${quadWords(p.phi)}, so: <b>${dirName(n[0].th, n[0].turn, n[0].ref)}</b></p>
+    <p class="muted">Also correct: ${dirName(n[1].th, n[1].turn, n[1].ref)} · ${dirName(n[2].th, n[2].turn, n[2].ref)}</p>`;
+  $('#rs-sol').hidden = false;
+  if (!rs.done) { rs.done = true; rs.streak = 0; $('#rs-f').disabled = true; rsScore(); }
+  rsC.redraw();
+});
+$('#rs-new').addEventListener('click', rsNew);
+['#rs-tw', '#rs-tv', '#rs-tf'].forEach(s => $(s).addEventListener('change', rsNew));
+
+/* ======================= FIND THE COMPONENTS ======================= */
+const CPCTX = [
+  { kind: 'walk', sym: 'A', unit: 'm', lo: 5, hi: 30, dec: 1, form: 'compass', t: (m, d) => `Ivy runs ${m} at ${d}.`, what: 'Ivy\'s displacement' },
+  { kind: 'walk', sym: 'A', unit: 'km', lo: 1, hi: 12, dec: 1, form: 'compass', t: (m, d) => `On Mr. Jantz's orienteering course, one leg is ${m} at ${d}.`, what: 'the leg' },
+  { kind: 'walk', sym: 'A', unit: 'm', lo: 10, hi: 90, dec: 0, form: 'compass', t: (m, d) => `A drone flies ${m} at ${d}.`, what: 'the drone\'s displacement' },
+  { kind: 'walk', sym: 'A', unit: 'blocks', lo: 3, hi: 12, dec: 1, form: 'compass', t: (m, d) => `A pigeon flies ${m} at ${d} over the city.`, what: 'the pigeon\'s displacement' },
+  { kind: 'vel', sym: 'v', unit: 'm/s', lo: 8, hi: 10.5, dec: 1, form: 'axis', only: ['+x'], turns: ['above'], t: (m, d) => `At Mr. White's track meet, a long jumper leaves the board at ${m}, ${d}.`, what: 'the jumper\'s velocity' },
+  { kind: 'vel', sym: 'v', unit: 'm/s', lo: 15, hi: 30, dec: 1, form: 'axis', turns: ['above'], t: (m, d) => `Mrs. Luksic throws a softball at ${m}, ${d}.`, what: 'the softball\'s velocity' },
+  { kind: 'vel', sym: 'v', unit: 'm/s', lo: 6, hi: 10, dec: 1, form: 'axis', turns: ['above'], t: (m, d) => `A basketball leaves Mr. Vincenzo's hands at ${m}, ${d}.`, what: 'the basketball\'s velocity' },
+  { kind: 'vel', sym: 'v', unit: 'm/s', lo: 4, hi: 15, dec: 1, form: 'compass', t: (m, d) => `A hockey puck slides at ${m} at ${d}.`, what: 'the puck\'s velocity' },
+  { kind: 'vel', sym: 'v', unit: 'km/h', lo: 150, hi: 300, dec: 0, form: 'compass', t: (m, d) => `An airplane flies at ${m} at ${d}.`, what: 'the airplane\'s velocity' },
+  { kind: 'force', sym: 'F', unit: 'N', lo: 100, hi: 600, dec: 0, form: 'axis', t: (m, d) => `Dr. Shafer pulls on a rope with a force of ${m}, ${d}.`, what: 'the force' },
+  { kind: 'force', sym: 'F', unit: 'N', lo: 800, hi: 2500, dec: 0, form: 'compass', t: (m, d) => `A tow rope pulls a car with ${m} at ${d}.`, what: 'the force' }
+];
+const cp = { p: null, phase: 'quad', tries: 0, done: false, streak: 0, solved: 0, hint: 0, hover: 0, est: null };
+function cpGen() {
+  const kinds = [];
+  if ($('#cp-tw').checked) kinds.push('walk');
+  if ($('#cp-tv').checked) kinds.push('vel');
+  if ($('#cp-tf').checked) kinds.push('force');
+  const pool = CPCTX.filter(c => kinds.includes(c.kind));
+  const c = pick(pool.length ? pool : CPCTX);
+  let th; do { th = rint(10, 80); } while (th === 45);
+  let ref, turn;
+  if (c.form === 'axis') { ref = pick(c.only || ['+x', '-x']); turn = pick(c.turns || ['above', 'below']); }
+  else { ref = pick(['E', 'W', 'N', 'S']); turn = isHoriz(ref) ? pick(['N', 'S']) : pick(['E', 'W']); }
+  const mag = c.dec ? rnd(c.lo, c.hi, c.dec) : Math.round(rnd(c.lo, c.hi, 0) / 5) * 5;
+  const phi = phiOf(th, turn, ref);
+  const p = { ...c, th, ref, turn, mag, phi, x: mag * Math.cos(phi * D), y: mag * Math.sin(phi * D) };
+  p.magText = `${giv(mag, c.dec)} ${c.unit}`;
+  p.dirText = dirName(th, turn, ref, 0);
+  p.text = c.t(p.magText, p.dirText) + ` Find the x and y components of ${c.what}.`;
+  p.labels = c.form === 'axis' ? 'xy' : 'compass';
+  return p;
+}
+function cpNew() {
+  const p = cpGen(); cp.p = p;
+  cp.phase = honors ? 'est' : 'quad'; cp.tries = 0; cp.done = false; cp.hint = 0; cp.hover = 0; cp.est = null;
+  $('#cp-q').innerHTML = `<span class="lbl">Problem</span>${p.text}`;
+  $('#cp-s1').innerHTML = honors ? 'Estimate first: drag on the grid to draw the vector the way you picture it, then lock in.' : 'Click the quadrant where this vector points.';
+  $('#cp-elock').hidden = !honors; $('#cp-elock').disabled = true;
+  setFb($('#cp-efb'), '', '');
+  $$('.cp-u').forEach(e => e.textContent = p.unit);
+  $('#cp-sx').innerHTML = V(p.sym, 'x'); $('#cp-sy').innerHTML = V(p.sym, 'y');
+  ['#cp-x', '#cp-y'].forEach(s => { $(s).value = ''; markInput($(s), null); });
+  setMark($('#cp-mx'), null); setMark($('#cp-my'), null);
+  $('#cp-f').disabled = true; $('#cp-show').disabled = true;
+  setFb($('#cp-fb'), '', ''); $('#cp-sol').hidden = true;
+  cpScore(); cpC.redraw();
+}
+function cpScore() { $('#cp-score').textContent = `Streak ${cp.streak} · Solved ${cp.solved}`; }
+let cpView = null, cpDrag = false;
+const cpCv = $('#cp-cv');
+const cpC = setupCanvas(cpCv, (ctx, w, h) => {
+  fillBg(ctx, w, h);
+  const p = cp.p; if (!p) return;
+  const m = p.mag * 1.22;
+  const v = makeView({ x: 0, y: 0, w, h }, { x0: -m, x1: m, y0: -m, y1: m }, 12);
+  cpView = v;
+  const tq = quadOf(p.x, p.y);
+  if (cp.phase === 'quad' && cp.hover) { const q = quadRect(v, cp.hover, m); ctx.fillStyle = C.hover; ctx.fillRect(q.x, q.y, q.w, q.h); }
+  if (cp.phase === 'calc') { const q = quadRect(v, tq, m); ctx.fillStyle = C.pick; ctx.fillRect(q.x, q.y, q.w, q.h); }
+  const step = niceStep(v.s, 24);
+  drawGrid(ctx, v, step, 0);
+  drawAxes(ctx, v, p.labels);
+  $('#cp-foot').innerHTML = `Grid squares are ${step} ${p.unit}`;
+  const X0 = v.X(0), Y0 = v.Y(0);
+  if (cp.est) arrow(ctx, X0, Y0, v.X(cp.est.x), v.Y(cp.est.y), C.honors, 3, cp.phase === 'calc' ? [6, 5] : null, 14);
+  if (cp.est && cp.phase === 'calc') rich(ctx, ['your estimate'], v.X(cp.est.x) + 8, v.Y(cp.est.y) - 10, C.honors, 13, 'left');
+  if (cp.phase === 'quad' || cp.phase === 'est') {
+    centerText(ctx, cp.phase === 'quad' ? 'Click the quadrant where this vector points' : 'Drag to draw your estimate', w * 0.25, 22, C.muted, 15);
+    return;
+  }
+  const Xt = v.X(p.x), Yt = v.Y(p.y);
+  if (cp.done) {
+    arrow(ctx, X0, Y0, Xt, Y0, C.x, 3.5);
+    arrow(ctx, Xt, Y0, Xt, Yt, C.y, 3.5, [7, 5]);
+    rich(ctx, compLabelParts(p.sym, 'x', sfmt(p.x) + ' ' + p.unit), (X0 + Xt) / 2, Y0 + (p.y > 0 ? 16 : -14), C.x, 15, 'center');
+    rich(ctx, compLabelParts(p.sym, 'y', sfmt(p.y) + ' ' + p.unit), Xt + (p.x > 0 ? 10 : -10), (Y0 + Yt) / 2, C.y, 15, p.x > 0 ? 'left' : 'right');
+  } else {
+    ctx.save(); ctx.strokeStyle = C.muted; ctx.setLineDash([3, 4]); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(Xt, Yt); ctx.lineTo(Xt, Y0); ctx.moveTo(Xt, Yt); ctx.lineTo(X0, Yt); ctx.stroke(); ctx.restore();
+    rich(ctx, compLabelParts(p.sym, 'x', '?'), (X0 + Xt) / 2, Y0 + (p.y > 0 ? 16 : -14), C.x, 15, 'center');
+    rich(ctx, compLabelParts(p.sym, 'y', '?'), Xt + (p.x > 0 ? 10 : -10), (Y0 + Yt) / 2, C.y, 15, p.x > 0 ? 'left' : 'right');
+  }
+  // reference axis + angle
+  const ra = AX[p.ref];
+  ctx.save(); ctx.strokeStyle = C.accent; ctx.globalAlpha = 0.5; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(X0 + p.mag * 0.75 * v.s * Math.cos(ra * D), Y0 - p.mag * 0.75 * v.s * Math.sin(ra * D)); ctx.stroke(); ctx.restore();
+  arrow(ctx, X0, Y0, Xt, Yt, C.res, 4, null, 16);
+  const r = Math.min(64, Math.max(30, p.mag * v.s * 0.32));
+  const a2 = ra + (mod(TURN[p.turn] - ra) === 90 ? p.th : -p.th);
+  arcW(ctx, X0, Y0, r, ra, a2, C.accent, 2.5);
+  const mid = (ra + a2) / 2 * D;
+  ctx.save(); ctx.font = `700 15px ${SERIF}`; ctx.fillStyle = C.accent; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  halo(ctx, p.th + '°', X0 + (r + 20) * Math.cos(mid), Y0 - (r + 15) * Math.sin(mid)); ctx.restore();
+  const o = sideOff(p.phi, Math.cos(ra * D), Math.sin(ra * D), 24);
+  rich(ctx, [[p.sym, 'i'], ' = ' + p.magText], (X0 + Xt) / 2 + o[0], (Y0 + Yt) / 2 + o[1], C.res, 16, 'center');
+});
+function cpWorld(e) { const r = cpCv.getBoundingClientRect(); return { x: cpView.wx(e.clientX - r.left), y: cpView.wy(e.clientY - r.top) }; }
+cpCv.addEventListener('pointermove', e => {
+  if (!cpView) return;
+  if (cp.phase === 'quad') { const w = cpWorld(e); const q = quadOf(w.x || 1e-9, w.y || 1e-9); if (q !== cp.hover) { cp.hover = q; cpC.redraw(); } }
+  if (cp.phase === 'est' && cpDrag) { cp.est = cpWorld(e); $('#cp-elock').disabled = false; cpC.redraw(); }
+});
+cpCv.addEventListener('pointerleave', () => { if (cp.hover) { cp.hover = 0; cpC.redraw(); } });
+cpCv.addEventListener('pointerup', () => { cpDrag = false; });
+cpCv.addEventListener('pointerdown', e => {
+  if (!cpView) return;
+  const p = cp.p;
+  if (cp.phase === 'est') { cpDrag = true; cpCv.setPointerCapture(e.pointerId); cp.est = cpWorld(e); $('#cp-elock').disabled = false; cpC.redraw(); return; }
+  if (cp.phase !== 'quad') return;
+  const w = cpWorld(e), q = quadOf(w.x || 1e-9, w.y || 1e-9);
+  if (q === quadOf(p.x, p.y)) {
+    cp.phase = 'calc'; $('#cp-f').disabled = false;
+    $('#cp-s1').innerHTML = `<span class="mark ok">✓</span> ${quadWords(p.phi).replace(/^./, ch => ch.toUpperCase())}. The highlighted axis is where the ${p.th}° is measured from.`;
+  } else {
+    $('#cp-s1').innerHTML = `<span class="mark no">✗</span> Not that one. ${cpHow(p)} Try again.`;
+  }
+  cpC.redraw();
+});
+function cpHow(p) {
+  return (p.ref === '+x' || p.ref === '-x')
+    ? `Start on ${WORD[p.ref]} (${p.ref === '+x' ? 'right' : 'left'}), then turn ${p.th}° ${p.turn === 'above' ? 'up' : 'down'}.`
+    : `Start facing ${WORD[p.ref]} (the word after “of”), then turn ${p.th}° toward ${WORD[p.turn]}.`;
+}
+$('#cp-elock').addEventListener('click', () => {
+  const p = cp.p; if (!cp.est) return;
+  const ea = mod(Math.atan2(cp.est.y, cp.est.x) / D), em = Math.hypot(cp.est.x, cp.est.y);
+  const da = Math.abs(mod(ea - p.phi + 180) - 180), dm = Math.abs(em - p.mag) / p.mag * 100;
+  cp.phase = 'calc'; $('#cp-f').disabled = false; $('#cp-elock').disabled = true;
+  $('#cp-s1').innerHTML = da < 90 ? `Your estimate (purple) is ${Math.round(da)}° away from the true direction (navy) and ${Math.round(dm)}% ${em > p.mag ? 'too long' : 'too short'}.` : `Your estimate (purple) points the wrong way: ${Math.round(da)}° off. ${cpHow(p)}`;
+  setFb($('#cp-efb'), da <= 10 ? 'ok' : 'info', da <= 10 ? 'Nice estimate. Now calculate the components.' : 'Compare the two arrows, then calculate the components.');
+  cpC.redraw();
+});
+function cpInfo(axis) { const p = cp.p; return { axis, mag: p.mag, th: p.th, ref: p.ref, scale: p.mag, who: 'this vector' }; }
+$('#cp-check').addEventListener('click', () => {
+  if (cp.done) return;
+  const p = cp.p; cp.tries++; $('#cp-show').disabled = false;
+  const rx = checkComp(num($('#cp-x').value), p.x, cpInfo('x'));
+  const ry = checkComp(num($('#cp-y').value), p.y, cpInfo('y'));
+  setMark($('#cp-mx'), rx.ok); markInput($('#cp-x'), rx.ok);
+  setMark($('#cp-my'), ry.ok); markInput($('#cp-y'), ry.ok);
+  if (rx.ok && ry.ok) {
+    cp.done = true; cp.solved++; cp.streak++; $('#cp-f').disabled = true;
+    const horiz = isHoriz(p.ref);
+    setFb($('#cp-fb'), 'ok', `Correct! The ${p.th}° touches ${WORD[p.ref]}, so ${horiz ? 'x' : 'y'} got the cosine. Check: √((${fmt(p.x)})² + (${fmt(p.y)})²) = ${fmt(Math.hypot(p.x, p.y))} ${p.unit}.`);
+    cpC.redraw();
+  } else {
+    cp.streak = 0;
+    const msgs = [rx.ok ? '' : `${p.sym}x: ${rx.msg}`, ry.ok ? '' : `${p.sym}y: ${ry.msg}`].filter(Boolean);
+    setFb($('#cp-fb'), 'no', msgs.map(s => s.replace(/^(\w)(x|y): /, (a, b, c) => `<b>${V(b, c)}:</b> `)).join('<br>'));
+  }
+  cpScore();
+});
+const CP_HINTS = [
+  'Find the axis the angle touches: the word after “of”, or the ±x-axis. It is highlighted on the sketch.',
+  'The component along that axis gets the cosine. The other component gets the sine.',
+  'Signs come from the sketch: east and north are positive, west and south are negative.',
+  'Check your answer: √(x² + y²) should give back the magnitude.'
+];
+$('#cp-hint').addEventListener('click', () => { setFb($('#cp-fb'), 'info', `Hint ${cp.hint + 1} of ${CP_HINTS.length}: ${CP_HINTS[cp.hint]}`); cp.hint = (cp.hint + 1) % CP_HINTS.length; });
+$('#cp-show').addEventListener('click', () => {
+  const p = cp.p, horiz = isHoriz(p.ref);
+  const M = giv(p.mag, p.dec);
+  const sx = p.x < 0 ? MINUS : '+', sy = p.y < 0 ? MINUS : '+';
+  $('#cp-sol').innerHTML = `
+    <p>The ${p.th}° touches ${WORD[p.ref]}, so the ${horiz ? 'x (east–west)' : 'y (north–south)'} side gets the cosine.</p>
+    <p class="xc">${V(p.sym, 'x')} = ${sx}${M} ${horiz ? 'cos' : 'sin'} ${p.th}° = <b>${sfmt(p.x)} ${p.unit}</b></p>
+    <p class="yc">${V(p.sym, 'y')} = ${sy}${M} ${horiz ? 'sin' : 'cos'} ${p.th}° = <b>${sfmt(p.y)} ${p.unit}</b></p>
+    <p class="muted">Signs from the sketch: it points ${quadWords(p.phi)}.</p>`;
+  $('#cp-sol').hidden = false;
+  if (!cp.done) { cp.done = true; cp.streak = 0; $('#cp-f').disabled = true; if (cp.phase !== 'calc') cp.phase = 'calc'; cpScore(); }
+  cpC.redraw();
+});
+$('#cp-new').addEventListener('click', cpNew);
+['#cp-tw', '#cp-tv', '#cp-tf'].forEach(s => $(s).addEventListener('change', cpNew));
+
+/* ======================= MULTIPLE LEGS ======================= */
+const MLCTX = [
+  { lead: 'Mr. Jantz sets up an orienteering course.', subj: 'Mr. Jantz', unit: 'km', lo: 1, hi: 9, dec: 1, home: 'Mr. Jantz' },
+  { lead: 'Ivy runs around the backyard.', unit: 'm', lo: 2, hi: 20, dec: 1, home: 'Ivy' },
+  { lead: 'Mr. Peck goes for a run with Phoebe.', unit: 'km', lo: 0.5, hi: 4, dec: 1, home: 'Mr. Peck and Phoebe' },
+  { lead: 'A delivery robot drives through town.', unit: 'blocks', lo: 1, hi: 8, dec: 0, home: 'the robot' },
+  { lead: 'A drone flies over the soccer field.', unit: 'm', lo: 10, hi: 60, dec: 0, home: 'the drone' },
+  { lead: 'A geocacher follows the clues in a park.', unit: 'm', lo: 10, hi: 80, dec: 0, home: 'the geocacher' }
+];
+const MLFORCE = { lead: 'In Dr. Shafer\'s tug-of-war drill, several ropes pull on one metal ring.', unit: 'N', lo: 50, hi: 400, dec: 0, force: true };
+const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+const ml = { p: null, tries: 0, done: false, streak: 0, solved: 0, hint: 0, revealed: false };
+const mlDir = dirBuilder($('#ml-dir'), 'ml-d');
+function makeLeg(c, angled) {
+  const mag = c.dec ? rnd(c.lo, c.hi, c.dec) : (c.force ? Math.round(rnd(c.lo, c.hi, 0) / 10) * 10 : rnd(c.lo, c.hi, 0));
+  if (!angled) {
+    const dir = pick(['E', 'W', 'N', 'S']); const phi = AX[dir];
+    return { mag, phi, axis: true, dirword: WORD[dir], x: mag * Math.round(Math.cos(phi * D)), y: mag * Math.round(Math.sin(phi * D)), name: WORD[dir] };
+  }
+  const ref = pick(['E', 'W', 'N', 'S']), turn = isHoriz(ref) ? pick(['N', 'S']) : pick(['E', 'W']);
+  let th; do { th = rint(2, 16) * 5; } while (th === 45);
+  const phi = phiOf(th, turn, ref);
+  return { mag, phi, th, ref, turn, axis: false, x: mag * Math.cos(phi * D), y: mag * Math.sin(phi * D), name: dirName(th, turn, ref, 0) };
+}
+function mlGen() {
+  const n = Number($('#ml-n').value);
+  const mode = honors ? $('#ml-mode').value : 'result';
+  const angles = honors && $('#ml-ang').checked;
+  const useForce = mode === 'result' && Math.random() < 0.2;
+  const c = useForce ? MLFORCE : pick(MLCTX);
+  for (let tries = 0; tries < 400; tries++) {
+    const legs = [];
+    for (let i = 0; i < n; i++) {
+      let angled = angles && Math.random() < 0.7;
+      if (mode === 'missing' && i === n - 1) angled = true;
+      legs.push(makeLeg(c, angled));
+    }
+    if (angles && legs.filter(l => !l.axis).length < Math.min(2, n)) continue;
+    let ok = true;
+    for (let i = 1; i < n; i++) if (Math.abs(mod(legs[i].phi - legs[i - 1].phi) - 180) < 1 || legs[i].phi === legs[i - 1].phi && legs[i].axis) ok = false;
+    if (!ok) continue;
+    const Rx = legs.reduce((s, l) => s + l.x, 0), Ry = legs.reduce((s, l) => s + l.y, 0);
+    const scale = Math.max(...legs.map(l => l.mag));
+    if (Math.abs(Rx) < 0.12 * scale || Math.abs(Ry) < 0.12 * scale) continue;
+    const p = { c, n, mode, legs, Rx, Ry, unit: c.unit, scale, force: !!c.force };
+    if (mode === 'missing') {
+      const known = legs.slice(0, n - 1);
+      const R = Math.hypot(Rx, Ry), phi = mod(Math.atan2(Ry, Rx) / D), nm = allNames(phi)[0];
+      p.given = { mag: Number(fmt(R).replace(MINUS, '-')), th: Number(nm.th.toFixed(1)), turn: nm.turn, ref: nm.ref };
+      p.given.phi = phiOf(p.given.th, p.given.turn, p.given.ref);
+      p.given.x = p.given.mag * Math.cos(p.given.phi * D); p.given.y = p.given.mag * Math.sin(p.given.phi * D);
+      p.known = known;
+      const kx = known.reduce((s, l) => s + l.x, 0), ky = known.reduce((s, l) => s + l.y, 0);
+      p.target = { x: p.given.x - kx, y: p.given.y - ky };
+      if (Math.abs(p.target.x) < 0.1 * scale || Math.abs(p.target.y) < 0.1 * scale) continue;
+    } else if (mode === 'home') {
+      p.known = legs; p.target = { x: -Rx, y: -Ry };
+    } else { p.known = legs; p.target = { x: Rx, y: Ry }; }
+    p.target.R = Math.hypot(p.target.x, p.target.y); p.target.phi = mod(Math.atan2(p.target.y, p.target.x) / D);
+    return p;
+  }
+  return null;
+}
+function legText(l, dec, unit) { return `${giv(l.mag, dec)} ${unit} ${l.axis ? l.name : 'at ' + l.name}`; }
+function mlNew() {
+  let p = null; while (!p) p = mlGen();
+  ml.p = p; ml.tries = 0; ml.done = false; ml.hint = 0; ml.revealed = false;
+  const c = p.c, L = p.known.map((l, i) => `<b>${LETTERS[i]}</b> = ${legText(l, c.dec, c.unit)}`).join('; ');
+  let ask;
+  if (p.mode === 'missing') {
+    const g = p.given, last = LETTERS[p.n - 1];
+    ask = `The finish is ${V('R')} = ${fmt(g.mag)} ${c.unit} at ${dirName(g.th, g.turn, g.ref)} from the start. Find leg <b>${last}</b>.`;
+  } else if (p.mode === 'home') {
+    ask = `Find the one straight leg that takes ${c.home} back to the start.`;
+  } else ask = p.force ? 'Find the magnitude and direction of the net force on the ring.' : 'Find the magnitude and direction of the displacement from start to finish.';
+  const lead = p.mode === 'missing' ? `${c.lead} It has ${p.n} legs. The first ${p.n - 1}:` : `${c.lead} ${p.force ? 'The forces:' : 'The legs:'}`;
+  $('#ml-q').innerHTML = `<span class="lbl">Problem</span>${lead} ${L}. ${ask}`;
+  $$('.ml-u').forEach(e => e.textContent = c.unit);
+  // table
+  const rows = p.known.map((l, i) => `<tr><td class="leg"><b>${LETTERS[i]}</b><br>${legText(l, c.dec, c.unit)}</td><td><input class="n" id="ml-${i}-x" inputmode="decimal" aria-label="${LETTERS[i]} x"></td><td><input class="n" id="ml-${i}-y" inputmode="decimal" aria-label="${LETTERS[i]} y"></td></tr>`);
+  if (p.mode === 'missing') {
+    const last = LETTERS[p.n - 1];
+    rows.push(`<tr class="sum"><td class="leg"><b>${V('R')}</b> (finish)</td><td><input class="n" id="ml-R-x" inputmode="decimal" aria-label="R x"></td><td><input class="n" id="ml-R-y" inputmode="decimal" aria-label="R y"></td></tr>`);
+    rows.push(`<tr><td class="leg"><b>${last}</b> = ${V('R')} − ${LETTERS.slice(0, p.n - 1).join(' − ')}</td><td><input class="n" id="ml-T-x" inputmode="decimal" aria-label="${last} x"></td><td><input class="n" id="ml-T-y" inputmode="decimal" aria-label="${last} y"></td></tr>`);
+    $('#ml-fsym').innerHTML = `<b>${last}</b>`;
+  } else {
+    rows.push(`<tr class="sum"><td class="leg"><b>Sum</b> (${V('R', 'x')}, ${V('R', 'y')})</td><td><input class="n" id="ml-R-x" inputmode="decimal" aria-label="R x"></td><td><input class="n" id="ml-R-y" inputmode="decimal" aria-label="R y"></td></tr>`);
+    if (p.mode === 'home') {
+      rows.push(`<tr><td class="leg"><b>Home</b> = −${V('R')}</td><td><input class="n" id="ml-T-x" inputmode="decimal" aria-label="Home x"></td><td><input class="n" id="ml-T-y" inputmode="decimal" aria-label="Home y"></td></tr>`);
+      $('#ml-fsym').innerHTML = '<b>Home</b>';
+    } else $('#ml-fsym').innerHTML = p.force ? V('F', 'net') : V('R');
+  }
+  $('#ml-tbl tbody').innerHTML = rows.join('');
+  $('#ml-R').value = ''; markInput($('#ml-R'), null); mlDir.clear();
+  setMark($('#ml-mR'), null); setMark($('#ml-mD'), null);
+  $('#ml-show').disabled = true; $('#ml-check').disabled = false;
+  setFb($('#ml-fb'), '', ''); $('#ml-sol').hidden = true;
+  mlScore(); mlFoot(); mlC.redraw();
+}
+function mlScore() { $('#ml-score').textContent = `Streak ${ml.streak} · Solved ${ml.solved}`; }
+function mlFoot() {
+  const p = ml.p, c = p.c;
+  if (p.force) { $('#ml-foot').innerHTML = ml.revealed ? `Net force: <b>${fmt(p.target.R)} N at ${dirName(allNames(p.target.phi)[0].th, allNames(p.target.phi)[0].turn, allNames(p.target.phi)[0].ref)}</b>` : 'Forces drawn tip-to-tail. Net force: shown after you check.'; return; }
+  const dist = p.known.reduce((s, l) => s + l.mag, 0);
+  const n = allNames(p.target.phi)[0];
+  const tname = p.mode === 'missing' ? `Leg ${LETTERS[p.n - 1]}` : p.mode === 'home' ? 'Leg home' : 'Displacement';
+  $('#ml-foot').innerHTML = `${p.mode === 'missing' ? 'Distance of the known legs' : 'Distance traveled'}: <b>${fmt(dist)} ${c.unit}</b> (scalar) · ${tname}: ${ml.revealed ? `<b>${fmt(p.target.R)} ${c.unit} at ${dirName(n.th, n.turn, n.ref)}</b> (vector)` : 'shown after you check'}`;
+}
+const mlCv = $('#ml-cv');
+const mlC = setupCanvas(mlCv, (ctx, w, h) => {
+  fillBg(ctx, w, h);
+  const p = ml.p; if (!p) return;
+  if ($('#ml-hide').checked && !ml.revealed) { centerText(ctx, 'Map hidden until you check', w / 2, h / 2, C.muted, 17); $('#ml-scale').textContent = ''; return; }
+  const pts = [{ x: 0, y: 0 }];
+  p.known.forEach(l => { const q = pts[pts.length - 1]; pts.push({ x: q.x + l.x, y: q.y + l.y }); });
+  const finish = p.mode === 'missing' ? { x: p.given.x, y: p.given.y } : pts[pts.length - 1];
+  const all = [...pts, finish];
+  const xs = all.map(q => q.x), ys = all.map(q => q.y);
+  const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+  const padW = span * 0.12;
+  const v = makeView({ x: 0, y: 0, w, h }, { x0: Math.min(...xs) - padW, x1: Math.max(...xs) + padW, y0: Math.min(...ys) - padW, y1: Math.max(...ys) + padW }, 26);
+  const step = niceStep(v.s, 26);
+  drawGrid(ctx, v, step, 0);
+  ctx.save(); ctx.strokeStyle = C.axis; ctx.lineWidth = 1; ctx.globalAlpha = 0.7;
+  ctx.beginPath(); ctx.moveTo(0, v.Y(0)); ctx.lineTo(w, v.Y(0)); ctx.moveTo(v.X(0), 0); ctx.lineTo(v.X(0), h); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.font = `700 15px ${SERIF}`; ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  halo(ctx, 'N', w - 26, 10); ctx.restore();
+  arrow(ctx, w - 26, 56, w - 26, 30, C.ink, 2, null, 9);
+  $('#ml-scale').textContent = `Grid squares are ${step} ${p.unit}`;
+  const showComp = $('#ml-comp').checked;
+  p.known.forEach((l, i) => {
+    const a = pts[i], b = pts[i + 1];
+    if (showComp && !l.axis) {
+      arrow(ctx, v.X(a.x), v.Y(a.y), v.X(b.x), v.Y(a.y), C.x, 2, [5, 4], 9);
+      arrow(ctx, v.X(b.x), v.Y(a.y), v.X(b.x), v.Y(b.y), C.y, 2, [5, 4], 9);
+    }
+    arrow(ctx, v.X(a.x), v.Y(a.y), v.X(b.x), v.Y(b.y), C.leg, 3.5, null, 14);
+    const mx = (v.X(a.x) + v.X(b.x)) / 2, my = (v.Y(a.y) + v.Y(b.y)) / 2;
+    const ang = Math.atan2(-(b.y - a.y), b.x - a.x);
+    rich(ctx, [LETTERS[i]], mx + 14 * Math.sin(ang), my - 14 * Math.cos(ang), C.ink, 16, 'center');
+  });
+  const end = pts[pts.length - 1];
+  if (p.mode === 'missing') {
+    arrow(ctx, v.X(end.x), v.Y(end.y), v.X(finish.x), v.Y(finish.y), C.accent, 3, ml.revealed ? null : [8, 6], 14);
+    rich(ctx, [ml.revealed ? LETTERS[p.n - 1] : LETTERS[p.n - 1] + ' = ?'], (v.X(end.x) + v.X(finish.x)) / 2 + 12, (v.Y(end.y) + v.Y(finish.y)) / 2, C.accent, 16, 'left');
+    arrow(ctx, v.X(0), v.Y(0), v.X(finish.x), v.Y(finish.y), C.res, 3, [3, 5], 14);
+    rich(ctx, [['R', 'i']], (v.X(0) + v.X(finish.x)) / 2 - 12, (v.Y(0) + v.Y(finish.y)) / 2 - 12, C.res, 16, 'center');
+  } else if (p.mode === 'home') {
+    arrow(ctx, v.X(end.x), v.Y(end.y), v.X(0), v.Y(0), C.accent, 3.5, ml.revealed ? null : [8, 6], 15);
+    rich(ctx, [ml.revealed ? 'home' : 'home = ?'], (v.X(end.x) + v.X(0)) / 2 + 12, (v.Y(end.y) + v.Y(0)) / 2, C.accent, 16, 'left');
+  } else if (ml.revealed) {
+    arrow(ctx, v.X(0), v.Y(0), v.X(end.x), v.Y(end.y), C.res, 4, null, 16);
+    rich(ctx, [p.force ? 'net force' : 'displacement'], (v.X(0) + v.X(end.x)) / 2 + 10, (v.Y(0) + v.Y(end.y)) / 2 + 14, C.res, 15, 'left');
+  }
+  dot(ctx, v.X(0), v.Y(0), 6, C.good);
+  rich(ctx, [p.force ? 'Ring' : 'Start'], v.X(0) - 9, v.Y(0) + 12, C.good, 14, 'right');
+  if (!p.force) { dot(ctx, v.X(finish.x), v.Y(finish.y), 6, C.accent); rich(ctx, ['Finish'], v.X(finish.x) + 9, v.Y(finish.y) + 13, C.accent, 14, 'left'); }
+});
+function mlCellInfo(l, axis, i) {
+  return { axis, mag: l.mag, th: l.th, ref: l.ref, axisLeg: l.axis, dirword: l.dirword, scale: ml.p.scale, who: `Leg ${LETTERS[i]}` };
+}
+$('#ml-check').addEventListener('click', () => {
+  if (ml.done) return;
+  const p = ml.p; ml.tries++; $('#ml-show').disabled = false;
+  let first = null, allOk = true, anyEmpty = false;
+  const report = (r, el) => {
+    markInput(el, r.empty ? null : r.ok);
+    if (!r.ok) { allOk = false; if (r.empty) anyEmpty = true; else if (!first) first = r.msg; }
+  };
+  const near = (v, c) => isFinite(v) && Math.abs(v - c) <= Math.max(0.01 * Math.abs(c), 0.004 * p.scale, 0.005);
+  p.known.forEach((l, i) => {
+    report(checkComp(num($(`#ml-${i}-x`).value), l.x, mlCellInfo(l, 'x', i)), $(`#ml-${i}-x`));
+    report(checkComp(num($(`#ml-${i}-y`).value), l.y, mlCellInfo(l, 'y', i)), $(`#ml-${i}-y`));
+  });
+  const kx = p.known.reduce((s, l) => s + l.x, 0), ky = p.known.reduce((s, l) => s + l.y, 0);
+  const sumCheck = (axis, c, label) => {
+    const el = $(`#ml-R-${axis}`), v = num(el.value);
+    if (!isFinite(v)) return report({ ok: false, empty: true }, el);
+    if (near(v, c)) return report({ ok: true }, el);
+    if (p.mode === 'missing') {
+      const g = p.given, horiz = isHoriz(g.ref);
+      const useCos = (axis === 'x') === horiz;
+      const other = g.mag * (useCos ? Math.sin(g.th * D) : Math.cos(g.th * D));
+      if (near(-v, c)) return report({ ok: false, msg: `${label}: the size is right, but check the sign from the finish's direction.` }, el);
+      if (near(Math.abs(v), other)) return report({ ok: false, msg: `${label}: sine and cosine look swapped. The angle touches ${WORD[g.ref]}.` }, el);
+      return report({ ok: false, msg: `${label}: resolve the finish vector ${V('R')} the same way as a leg.` }, el);
+    }
+    const sumAbs = p.known.reduce((s, l) => s + Math.abs(axis === 'x' ? l.x : l.y), 0);
+    if (near(v, sumAbs)) return report({ ok: false, msg: `${label}: add the column with its signs. West and south parts subtract.` }, el);
+    return report({ ok: false, msg: `${label}: add every number in the ${axis} column, signs included.` }, el);
+  };
+  if (p.mode === 'missing') { sumCheck('x', p.given.x, V('R', 'x')); sumCheck('y', p.given.y, V('R', 'y')); }
+  else { sumCheck('x', kx, V('R', 'x')); sumCheck('y', ky, V('R', 'y')); }
+  if (p.mode !== 'result') {
+    ['x', 'y'].forEach(axis => {
+      const el = $(`#ml-T-${axis}`), v = num(el.value), c = p.target[axis];
+      if (!isFinite(v)) return report({ ok: false, empty: true }, el);
+      if (near(v, c)) return report({ ok: true }, el);
+      if (p.mode === 'home' && near(-v, c)) return report({ ok: false, msg: 'Home points the opposite way from start → finish, so flip both signs of the sum.' }, el);
+      if (p.mode === 'missing') {
+        const k = axis === 'x' ? kx : ky, R = axis === 'x' ? p.given.x : p.given.y;
+        if (near(v, R + k)) return report({ ok: false, msg: `Leg ${LETTERS[p.n - 1]}: subtract the known legs from ${V('R')}, don't add them.` }, el);
+        return report({ ok: false, msg: `Leg ${LETTERS[p.n - 1]}: in each column, take ${V('R')} and subtract every known leg.` }, el);
+      }
+      return report({ ok: false, msg: 'Check the home row: it is the sum with both signs flipped.' }, el);
+    });
+  }
+  const t = p.target;
+  const m = checkMag(num($('#ml-R').value), t.R, t.x, t.y);
+  let d = checkDir(t.phi, mlDir.get());
+  if (!d.ok && p.mode === 'home') { const dd = mlDir.get(); if (dd.turn && dd.ref && checkDir(mod(t.phi + 180), dd).ok) d = { ok: false, msg: 'That is the direction from start to finish. Home points the opposite way.' }; }
+  if (!d.ok && p.mode === 'missing') { const dd = mlDir.get(); if (dd.turn && dd.ref && checkDir(p.given.phi, dd).ok) d = { ok: false, msg: `That is the direction of ${V('R')}. The question asks for leg ${LETTERS[p.n - 1]}.` }; }
+  const mEmpty = !isFinite(num($('#ml-R').value)), dEmpty = !isFinite(mlDir.get().th);
+  setMark($('#ml-mR'), mEmpty ? null : m.ok); markInput($('#ml-R'), mEmpty ? null : m.ok);
+  setMark($('#ml-mD'), dEmpty ? null : d.ok); mlDir.mark(dEmpty ? '' : d.ok ? 'good' : 'bad');
+  if (!m.ok) { allOk = false; if (mEmpty) anyEmpty = true; else if (!first) first = m.msg; }
+  if (!d.ok) { allOk = false; if (dEmpty) anyEmpty = true; else if (!first) first = d.msg; }
+  if (allOk) {
+    ml.done = true; ml.revealed = true; ml.solved++; ml.streak++; $('#ml-check').disabled = true;
+    const n = allNames(t.phi);
+    setFb($('#ml-fb'), 'ok', `Correct! Also correct: ${dirName(n[1].th, n[1].turn, n[1].ref)} · ${dirName(n[2].th, n[2].turn, n[2].ref)}.`);
+  } else {
+    ml.streak = 0;
+    setFb($('#ml-fb'), first ? 'no' : 'info', first || (anyEmpty ? 'Everything you filled in so far is right. Keep going.' : ''));
+  }
+  mlScore(); mlFoot(); mlC.redraw();
+});
+const ML_HINTS = [
+  'One row per leg: x is the east–west part, y is the north–south part. A leg along an axis goes straight into one column, with 0 in the other.',
+  'For an angled leg, the side touching the angle gets the cosine. Signs come from the direction: west and south are negative.',
+  'Add each column with its signs to get the totals.',
+  'Combine the totals: magnitude = √(x² + y²), angle = tan⁻¹ of the sizes, then name the direction.'
+];
+$('#ml-hint').addEventListener('click', () => {
+  const extra = ml.p.mode === 'missing' ? ' For the missing leg: in each column, take the finish R and subtract the known legs.' : ml.p.mode === 'home' ? ' For the way home: flip both signs of the sum.' : '';
+  setFb($('#ml-fb'), 'info', `Hint ${ml.hint + 1} of ${ML_HINTS.length}: ${ML_HINTS[ml.hint]}${ml.hint === 2 ? extra : ''}`);
+  ml.hint = (ml.hint + 1) % ML_HINTS.length;
+});
+$('#ml-show').addEventListener('click', () => {
+  const p = ml.p, c = p.c, u = c.unit;
+  const lines = p.known.map((l, i) => {
+    if (l.axis) return `<p><b>${LETTERS[i]}</b>: straight ${l.dirword}, so x = ${sfmt(l.x)}, y = ${sfmt(l.y)}</p>`;
+    const horiz = isHoriz(l.ref), M = giv(l.mag, c.dec);
+    const sx = l.x < 0 ? MINUS : '+', sy = l.y < 0 ? MINUS : '+';
+    return `<p><b>${LETTERS[i]}</b>: x = ${sx}${M} ${horiz ? 'cos' : 'sin'} ${l.th}° = ${sfmt(l.x)}, y = ${sy}${M} ${horiz ? 'sin' : 'cos'} ${l.th}° = ${sfmt(l.y)}</p>`;
+  });
+  const kx = p.known.reduce((s, l) => s + l.x, 0), ky = p.known.reduce((s, l) => s + l.y, 0);
+  if (p.mode === 'missing') {
+    const g = p.given, horiz = isHoriz(g.ref);
+    lines.push(`<p><b>${V('R')}</b>: x = ${g.x < 0 ? MINUS : '+'}${fmt(g.mag)} ${horiz ? 'cos' : 'sin'} ${g.th}° = ${sfmt(g.x)}, y = ${g.y < 0 ? MINUS : '+'}${fmt(g.mag)} ${horiz ? 'sin' : 'cos'} ${g.th}° = ${sfmt(g.y)}</p>`);
+    lines.push(`<p><b>${LETTERS[p.n - 1]}</b> = ${V('R')} − (known legs): x = ${fmt(g.x)} − (${fmt(kx)}) = ${sfmt(p.target.x)}, y = ${fmt(g.y)} − (${fmt(ky)}) = ${sfmt(p.target.y)}</p>`);
+  } else {
+    lines.push(`<p><b>Sum</b>: ${V('R', 'x')} = ${sfmt(kx)}, ${V('R', 'y')} = ${sfmt(ky)}</p>`);
+    if (p.mode === 'home') lines.push(`<p><b>Home</b> = −${V('R')}: x = ${sfmt(p.target.x)}, y = ${sfmt(p.target.y)}</p>`);
+  }
+  const t = p.target, n = allNames(t.phi);
+  lines.push(`<p>Magnitude = √((${fmt(t.x)})<sup>2</sup> + (${fmt(t.y)})<sup>2</sup>) = <b>${fmt(t.R)} ${u}</b></p>`);
+  lines.push(`<p>Angle = tan<sup>−1</sup>(${fmt(Math.abs(t.y))} / ${fmt(Math.abs(t.x))}) = ${fmtA(n[0].th)}°; it points ${quadWords(t.phi)}: <b>${dirName(n[0].th, n[0].turn, n[0].ref)}</b></p>`);
+  lines.push(`<p class="muted">Also correct: ${dirName(n[1].th, n[1].turn, n[1].ref)} · ${dirName(n[2].th, n[2].turn, n[2].ref)}</p>`);
+  $('#ml-sol').innerHTML = lines.join(''); $('#ml-sol').hidden = false;
+  if (!ml.done) { ml.done = true; ml.streak = 0; $('#ml-check').disabled = true; mlScore(); }
+  ml.revealed = true; mlFoot(); mlC.redraw();
+});
+$('#ml-new').addEventListener('click', mlNew);
+['#ml-n', '#ml-mode', '#ml-ang'].forEach(s => $(s).addEventListener('change', mlNew));
+['#ml-hide', '#ml-comp'].forEach(s => $(s).addEventListener('change', () => mlC.redraw()));
+
+/* ---------- theme changes ---------- */
+const mq = window.matchMedia('(prefers-color-scheme: dark)');
+const retheme = () => { readColors(); redrawers.forEach(r => r.redraw()); };
+if (mq.addEventListener) mq.addEventListener('change', retheme);
+new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class', 'style'] });
+
+/* ---------- start ---------- */
+dwUpdate(); exUpdate(); rsNew(); cpNew(); mlNew();
+const startTab = location.hash.replace('#', '');
+showTab(TABS[startTab] ? startTab : (TABS[store.get('vectorlab-tab')] ? store.get('vectorlab-tab') : 'ex'));
+window.__vl = { ex, rs, cp, ml, dw, checkDir, checkComp, allNames, phiOf, thetaIn, setExView, setDwMode, showTab, exUpdate };
+})();
+</script>
